@@ -135,6 +135,18 @@ export const Storage = {
     });
   },
 
+  clearAllShoppingLists(): void {
+    if (!canUseStorage()) return;
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(`${STORAGE_KEYS.SHOPPING_LISTS}_`)) {
+        toRemove.push(key);
+      }
+    }
+    toRemove.forEach((key) => localStorage.removeItem(key));
+  },
+
   getSettings(): AppSettings {
     const saved = readJson<Partial<AppSettings> | null>(STORAGE_KEYS.SETTINGS, null);
     return {
@@ -187,7 +199,8 @@ export const Storage = {
       if (parsed.plans && typeof parsed.plans === 'object') {
         writeJson(STORAGE_KEYS.PLANS, parsed.plans);
       }
-      if (parsed.shoppingLists && typeof parsed.shoppingLists === 'object') {
+      if (parsed.shoppingLists && typeof parsed.shoppingLists === 'object' && !Array.isArray(parsed.shoppingLists)) {
+        this.clearAllShoppingLists();
         this.saveAllShoppingLists(parsed.shoppingLists);
       }
       if (parsed.settings && typeof parsed.settings === 'object') {
@@ -209,13 +222,6 @@ export const Storage = {
     localStorage.removeItem(STORAGE_KEYS.PLANS);
     localStorage.removeItem(STORAGE_KEYS.SETTINGS);
     localStorage.removeItem(STORAGE_KEYS.PANTRY);
-    const toRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(`${STORAGE_KEYS.SHOPPING_LISTS}_`)) {
-        toRemove.push(key);
-      }
-    }
-    toRemove.forEach((key) => localStorage.removeItem(key));
+    this.clearAllShoppingLists();
   },
 };

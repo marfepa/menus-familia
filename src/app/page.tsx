@@ -58,13 +58,16 @@ export default function Home() {
     setWarnings(analyzePlanWarnings(loadedPlan, loadedRecipes));
 
     const savedList = Storage.getShoppingList(currentWeekStartDate);
-    const generated = generateShoppingListFromPlan(loadedPlan, loadedRecipes, {
-      existingShoppingList: savedList,
-      householdServings: loadedSettings.householdServings,
-      pantry: loadedPantry,
-    });
-    setShoppingItems(generated);
-    Storage.saveShoppingList(currentWeekStartDate, generated);
+    if (savedList) {
+      setShoppingItems(savedList);
+    } else {
+      const generated = generateShoppingListFromPlan(loadedPlan, loadedRecipes, {
+        householdServings: loadedSettings.householdServings,
+        pantry: loadedPantry,
+      });
+      setShoppingItems(generated);
+      Storage.saveShoppingList(currentWeekStartDate, generated);
+    }
   }, [currentWeekStartDate]);
 
   useEffect(() => {
@@ -85,7 +88,7 @@ export default function Home() {
     Storage.saveShoppingList(nextPlan.weekStartDate, updated);
   };
 
-  const handleAssignRecipeToSlot = (recipeId: string) => {
+  const handleAssignRecipeToSlot = (recipeId: string, asLeftover = false) => {
     if (!slotModalInfo || !weeklyPlan) return;
     persistPlan({
       ...weeklyPlan,
@@ -93,7 +96,9 @@ export default function Home() {
         ...weeklyPlan.days,
         [slotModalInfo.day]: {
           ...weeklyPlan.days[slotModalInfo.day],
-          [slotModalInfo.type]: { kind: 'recipe', recipeId, customName: undefined },
+          [slotModalInfo.type]: asLeftover
+            ? { kind: 'leftover', recipeId, customName: undefined }
+            : { kind: 'recipe', recipeId, customName: undefined },
         },
       },
     });

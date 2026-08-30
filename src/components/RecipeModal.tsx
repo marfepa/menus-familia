@@ -7,7 +7,7 @@ import { Search, X, Star, Clock, Plus } from 'lucide-react';
 interface RecipeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectRecipe: (recipeId: string) => void;
+  onSelectRecipe: (recipeId: string, asLeftover?: boolean) => void;
   onSetCustomMeal: (customName: string) => void;
   onSetOutMeal: () => void;
   onOpenCreateRecipe: () => void;
@@ -192,9 +192,25 @@ export const RecipeModal: React.FC<RecipeModalProps> = ({
                   </div>
                 </div>
 
-                <button className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-100/80 text-emerald-800 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                  Elegir
-                </button>
+                <div className="flex flex-col gap-1 shrink-0">
+                  <button
+                    type="button"
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-100/80 text-emerald-800 group-hover:bg-emerald-600 group-hover:text-white transition-colors"
+                  >
+                    Elegir
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectRecipe(recipe.id, true);
+                      onClose();
+                    }}
+                    className="text-[10px] font-bold px-2 py-1 rounded-md text-teal-800 bg-teal-50 hover:bg-teal-100"
+                  >
+                    Sobra / tupper
+                  </button>
+                </div>
               </div>
             ))
           )}

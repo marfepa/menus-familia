@@ -1023,8 +1023,6 @@ export function generateShoppingListFromPlan(
         const item = aggregatedMap.get(groupKey)!;
         if (item.unit === canonical.unit) {
           item.totalQty += canonical.qty;
-        } else {
-          item.totalQty += canonical.qty;
         }
         item.recipeSources.add(recipe.name);
         item.periods.add(period);

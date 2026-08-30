@@ -7,7 +7,7 @@ import {
   recipeIsGlutenLight,
   isKidsFriendlyDinner,
 } from '@/lib/menuGenerator';
-import { getSlotKind } from '@/lib/planUtils';
+import { getSlotKind, PLAN_DAYS } from '@/lib/planUtils';
 import { generateShoppingListFromPlan } from '@/lib/shoppingListGenerator';
 
 function recipe(partial: Partial<Recipe> & Pick<Recipe, 'id' | 'name'>): Recipe {
@@ -134,19 +134,19 @@ describe('menuGenerator', () => {
     assert.equal(lentejas?.recipeSource?.filter((n) => n === 'Lentejas batch').length, 1);
   });
 
-  it('no reutiliza una receta con fridgeLifeDays 2 como cocción nueva en el día 4', () => {
+  it('en modo cenas la sobra batch cae en la siguiente cena, no en la comida', () => {
     const { plan } = generateSmartWeeklyPlanWithMeta(
       '2026-08-31',
       [batchDinner, quickFish, batchLunch],
       { mode: 'dinners', rng }
     );
-    const cookedMonday = plan.days.lunes.dinner?.recipeId;
-    assert.ok(cookedMonday);
-    const thursday = plan.days.jueves.dinner;
-    if (thursday?.recipeId === cookedMonday) {
-      assert.equal(getSlotKind(thursday), 'leftover');
-    } else {
-      assert.notEqual(thursday?.recipeId, cookedMonday);
+    const mondayId = plan.days.lunes.dinner?.recipeId;
+    assert.ok(mondayId);
+    assert.equal(plan.days.lunes.lunch?.recipeId, undefined);
+    if (mondayId === 'batch-pollo') {
+      assert.equal(getSlotKind(plan.days.martes.dinner), 'leftover');
+      assert.equal(plan.days.martes.dinner?.recipeId, 'batch-pollo');
+      assert.equal(plan.days.martes.lunch?.recipeId, undefined);
     }
   });
 
@@ -161,6 +161,17 @@ describe('menuGenerator', () => {
       .filter(Boolean);
     assert.equal(dinnerIds.every((id) => id !== 'pasta-trigo'), true);
     assert.equal(dinnerIds.every((id) => id !== 'lenta'), true);
+  });
+
+  it('en modo solo cenas no rellena comidas con sobras', () => {
+    const { plan } = generateSmartWeeklyPlanWithMeta('2026-08-31', [batchLunch, batchDinner, quickFish], {
+      mode: 'dinners',
+      rng,
+    });
+    PLAN_DAYS.forEach((day) => {
+      assert.equal(plan.days[day].lunch?.recipeId, undefined);
+    });
+    assert.ok(plan.days.lunes.dinner?.recipeId);
   });
 
   it('en modo tuppers solo rellena comidas de lunes a viernes', () => {

@@ -5,14 +5,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Obtener la fecha del lunes de la semana dada una fecha o la actual
+export function toLocalISODate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export function getMonday(d: Date = new Date()): string {
   const date = new Date(d);
   const day = date.getDay();
-  // Domingo es 0, Lunes es 1
   const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(date.setDate(diff));
-  return monday.toISOString().split('T')[0];
+  date.setDate(diff);
+  return toLocalISODate(date);
 }
 
 // Formatear rango de semana (ej. "14 - 20 Octubre 2026")
@@ -34,5 +39,5 @@ export function getRelativeWeekMonday(offsetWeeks: number, currentMondayIso: str
   const [year, month, day] = currentMondayIso.split('-').map(Number);
   const date = new Date(year, month - 1, day);
   date.setDate(date.getDate() + offsetWeeks * 7);
-  return date.toISOString().split('T')[0];
+  return toLocalISODate(date);
 }

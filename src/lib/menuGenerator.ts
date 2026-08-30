@@ -78,7 +78,11 @@ export function analyzePlanWarnings(plan: WeeklyPlan, recipes: Recipe[]): string
     });
   });
 
-  if (leftoverCount === 0) {
+  const hasCookedSlots = PLAN_DAYS.some((day) => {
+    const d = plan.days[day];
+    return getSlotKind(d?.lunch) === 'recipe' || getSlotKind(d?.dinner) === 'recipe';
+  });
+  if (hasCookedSlots && leftoverCount === 0) {
     warnings.push('No se han encadenado sobras: cocina una receta batch para resolver 2–3 comidas.');
   }
   if (slowDinners > 0) {
@@ -210,19 +214,27 @@ export function generateSmartWeeklyPlanWithMeta(
       if (targetDay > 6) break;
 
       let placed = false;
-      if (cookMeal === 'lunch') {
-        if (targetDay <= 4 && slotEmpty(targetDay, 'lunch')) {
-          setSlot(targetDay, 'lunch', leftoverSlot(recipe, cookDay, cookMeal));
-          placed = true;
-        }
-      } else {
-        if (targetDay <= 4 && slotEmpty(targetDay, 'lunch')) {
-          setSlot(targetDay, 'lunch', leftoverSlot(recipe, cookDay, cookMeal));
-          placed = true;
-        } else if (slotEmpty(targetDay, 'dinner')) {
+      if (opts.mode === 'dinners') {
+        if (slotEmpty(targetDay, 'dinner')) {
           setSlot(targetDay, 'dinner', leftoverSlot(recipe, cookDay, cookMeal));
           placed = true;
         }
+      } else if (opts.mode === 'tuppers') {
+        if (targetDay <= 4 && slotEmpty(targetDay, 'lunch')) {
+          setSlot(targetDay, 'lunch', leftoverSlot(recipe, cookDay, cookMeal));
+          placed = true;
+        }
+      } else if (cookMeal === 'lunch') {
+        if (targetDay <= 4 && slotEmpty(targetDay, 'lunch')) {
+          setSlot(targetDay, 'lunch', leftoverSlot(recipe, cookDay, cookMeal));
+          placed = true;
+        }
+      } else if (targetDay <= 4 && slotEmpty(targetDay, 'lunch')) {
+        setSlot(targetDay, 'lunch', leftoverSlot(recipe, cookDay, cookMeal));
+        placed = true;
+      } else if (slotEmpty(targetDay, 'dinner')) {
+        setSlot(targetDay, 'dinner', leftoverSlot(recipe, cookDay, cookMeal));
+        placed = true;
       }
       if (!placed) break;
     }
