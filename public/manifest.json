@@ -1,0 +1,18 @@
+{
+  "name": "Menús de Casa",
+  "short_name": "Menús",
+  "description": "Planificador familiar de menús y lista de la compra",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#059669",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

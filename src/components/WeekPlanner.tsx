@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { WeeklyPlan, Recipe, DayOfWeek, DAYS_CONFIG } from '@/types';
+import { WeeklyPlan, Recipe, DayOfWeek, DAYS_CONFIG, GenerateMode } from '@/types';
 import { MealSlot } from './MealSlot';
 import { formatWeekRange, getRelativeWeekMonday, getMonday } from '@/lib/utils';
+import { countPlannedSlots } from '@/lib/planUtils';
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,9 +12,9 @@ import {
   RotateCcw,
   ShoppingCart,
   Calendar,
-  Layers,
-  CheckCircle2,
-  ListPlus
+  Copy,
+  Users,
+  AlertTriangle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -27,7 +28,13 @@ interface WeekPlannerProps {
   onViewRecipe: (recipe: Recipe) => void;
   onSmartGenerate: () => void;
   onClearWeek: () => void;
+  onCopyPreviousWeek: () => void;
   onGoToShoppingList: () => void;
+  generateMode: GenerateMode;
+  onGenerateModeChange: (mode: GenerateMode) => void;
+  householdServings: number;
+  onHouseholdServingsChange: (servings: number) => void;
+  warnings: string[];
 }
 
 export const WeekPlanner: React.FC<WeekPlannerProps> = ({
@@ -40,18 +47,17 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
   onViewRecipe,
   onSmartGenerate,
   onClearWeek,
+  onCopyPreviousWeek,
   onGoToShoppingList,
+  generateMode,
+  onGenerateModeChange,
+  householdServings,
+  onHouseholdServingsChange,
+  warnings,
 }) => {
   const currentMondayToday = getMonday(new Date());
   const isCurrentWeek = currentWeekStartDate === currentMondayToday;
-
-  // Contar cuántas comidas están planificadas de las 14 posibles (7 días x 2)
-  let plannedCount = 0;
-  DAYS_CONFIG.forEach(d => {
-    const day = weeklyPlan.days[d.id];
-    if (day?.lunch?.recipeId || day?.lunch?.customName) plannedCount++;
-    if (day?.dinner?.recipeId || day?.dinner?.customName) plannedCount++;
-  });
+  const plannedCount = countPlannedSlots(weeklyPlan);
 
   const recipeMap = new Map<string, Recipe>(recipes.map(r => [r.id, r]));
 
@@ -127,7 +133,43 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
             </span>
           </div>
 
-          {/* Botón Vaciar */}
+          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-2xl px-2 py-1.5">
+            <Users className="w-3.5 h-3.5 text-slate-500" />
+            <button
+              type="button"
+              onClick={() => onHouseholdServingsChange(Math.max(2, householdServings - 1))}
+              className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold"
+            >
+              −
+            </button>
+            <span className="text-xs font-bold text-slate-800 w-14 text-center">{householdServings} rac.</span>
+            <button
+              type="button"
+              onClick={() => onHouseholdServingsChange(Math.min(8, householdServings + 1))}
+              className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold"
+            >
+              +
+            </button>
+          </div>
+
+          <select
+            value={generateMode}
+            onChange={(e) => onGenerateModeChange(e.target.value as GenerateMode)}
+            className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-slate-700"
+          >
+            <option value="full">Semana completa</option>
+            <option value="dinners">Solo cenas</option>
+            <option value="tuppers">Solo tuppers L–V</option>
+          </select>
+
+          <button
+            onClick={onCopyPreviousWeek}
+            className="p-2.5 rounded-2xl text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 transition-all"
+            title="Copiar semana anterior"
+          >
+            <Copy className="w-4 h-4" />
+          </button>
+
           {plannedCount > 0 && (
             <button
               onClick={() => {
@@ -142,13 +184,12 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
             </button>
           )}
 
-          {/* Botón Generador Inteligente */}
           <button
             onClick={handleGenerateWithCelebration}
             className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 hover:shadow transition-all hover:scale-[1.02]"
           >
             <Sparkles className="w-4 h-4 text-yellow-300 fill-yellow-300" />
-            <span>Generar Menú Mágico</span>
+            <span>Generar menú</span>
           </button>
 
           {/* Botón Ir a Lista de la Compra */}
@@ -163,6 +204,17 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
         </div>
 
       </div>
+
+      {warnings.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 sm:p-4 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
+          <ul className="text-xs text-amber-900 space-y-1">
+            {warnings.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Cuadrícula Semanal (7 Columnas Lunes a Domingo) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3 sm:gap-4">

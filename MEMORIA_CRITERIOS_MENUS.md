@@ -88,3 +88,10 @@ Este documento sirve como **registro vivo y manual operativo** para diseñar los
   - Ajuste de los 5 pilares: Verduras fáciles, Gluten-light, Alta proteína, Preparación $\le 20$ min y Batch Cooking / Packs Residuo Cero.
   - Incorporación de fichas de adaptación infantil (BLW + cenas fáciles para niños) y selector de 2 tramos de compra.
   - **Estandarización de Lista de la Compra al modelo LIDL / ALDI / Consum**: Agrupación automática de ingredientes por formatos comerciales de lineal (mallas de 2kg, bandejas protegidas de 500g, botes de cristal de 400g, docenas de huevos, briks de 1L) con badges visuales de envase y desglose de consumo/aprovechamiento entre recetas.
+
+- **30/08/2026 (menú inteligente)**:
+  - El generador **encadena sobras de verdad**: recetas `batchCooking` ocupan 2–3 huecos consecutivos (tupper del día siguiente) y `fridgeLifeDays` evita recocinar el mismo plato en la ventana de nevera.
+  - **Despensa “ya lo tengo”**: AOVE, ajos y especias se restan por defecto; huevos, caldo, tamari, arroz y legumbres se marcan si hay stock.
+  - **Raciones de casa** (3/4/5…) escalan la lista de compra. Las sobras no duplican ingredientes.
+  - Filtros duros del generador: cenas ≤ 25 min y amables para niños; gluten-light si hay alternativa; modos semana completa / solo cenas / solo tuppers L–V.
+  - Huecos `receta` / `texto` / `fuera` / `sobras`. “Fuera” no compra. Copiar semana anterior. Backup JSON incluye listas, despensa y raciones. PWA instalable.

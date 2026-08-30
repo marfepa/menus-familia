@@ -9,13 +9,13 @@ Una aplicación web moderna, ágil y visual diseñada para planificar menús sem
 1. **📅 Planificador Semanal Interactivo**:
    - Vista de calendario de Lunes a Domingo con casillas diferenciadas para **Comida (Almuerzo)** y **Cena**.
    - Asignación rápida de recetas del catálogo familiar o platos libres.
-   - **✨ Botón "Generar Menú Mágico"**: Algoritmo inteligente que equilibra proteínas, evita repetir platos seguidos y prioriza las recetas favoritas.
+   - **✨ Generar menú**: encadena sobras (batch cooking), cenas rápidas, gluten-light y tuppers de oficina. Modos: semana completa, solo cenas o solo tuppers L–V. Copia la semana anterior.
    - Navegación fluida entre semanas (semana actual, anterior, siguiente o por fecha).
 
 2. **🛒 Lista de la Compra Inteligente**:
    - Consolidación y suma automática de ingredientes a partir del menú semanal.
    - Agrupación por **pasillos y departamentos del supermercado** (Frutería, Carnicería, Pescadería, Lácteos, Despensa, Panadería, Congelados, Otros).
-   - Checklist interactivo para ir tachando productos en el supermercado desde el móvil.
+   - Despensa “ya lo tengo”, raciones de casa y modo súper (checks grandes). Checklist en el lineal.
    - Posibilidad de añadir productos extra manualmente (limpieza, café, etc.).
    - **Botón de compartir para WhatsApp** con formato estructurado y emojis.
    - Modo de impresión limpia para papel o PDF.
@@ -28,7 +28,8 @@ Una aplicación web moderna, ágil y visual diseñada para planificar menús sem
 
 4. **💾 Copias de Seguridad & Privacidad**:
    - Persistencia local inmediata en el navegador (funciona 100% offline).
-   - Exportación e importación de copias de seguridad en formato `.json`.
+   - Exportación e importación de copias de seguridad en formato `.json` (recetas, semanas, listas, despensa y raciones).
+   - PWA instalable en el móvil (Añadir a pantalla de inicio).
 
 ---
 

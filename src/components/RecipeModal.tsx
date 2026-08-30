@@ -2,13 +2,14 @@
 
 import React, { useState, useMemo } from 'react';
 import { Recipe, DayOfWeek } from '@/types';
-import { Search, X, Star, Clock, Plus, Sparkles, Filter } from 'lucide-react';
+import { Search, X, Star, Clock, Plus } from 'lucide-react';
 
 interface RecipeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectRecipe: (recipeId: string) => void;
   onSetCustomMeal: (customName: string) => void;
+  onSetOutMeal: () => void;
   onOpenCreateRecipe: () => void;
   recipes: Recipe[];
   currentSlotInfo: { day: DayOfWeek; type: 'lunch' | 'dinner' } | null;
@@ -19,6 +20,7 @@ export const RecipeModal: React.FC<RecipeModalProps> = ({
   onClose,
   onSelectRecipe,
   onSetCustomMeal,
+  onSetOutMeal,
   onOpenCreateRecipe,
   recipes,
   currentSlotInfo,
@@ -199,8 +201,29 @@ export const RecipeModal: React.FC<RecipeModalProps> = ({
         </div>
 
         {/* Footer: Opción de plato libre o crear nueva receta */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3">
-          {/* Añadir plato rápido libre */}
+        <div className="p-4 border-t border-slate-200 bg-slate-50 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                onSetOutMeal();
+                onClose();
+              }}
+              className="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-200 text-slate-800 hover:bg-slate-300 transition-colors"
+            >
+              Comemos fuera
+            </button>
+            <button
+              onClick={() => {
+                onClose();
+                onOpenCreateRecipe();
+              }}
+              className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline whitespace-nowrap"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Crear receta</span>
+            </button>
+          </div>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -210,11 +233,11 @@ export const RecipeModal: React.FC<RecipeModalProps> = ({
                 onClose();
               }
             }}
-            className="flex items-center gap-2 w-full sm:w-auto flex-1"
+            className="flex items-center gap-2 w-full"
           >
             <input
               type="text"
-              placeholder="O escribe un plato libre (ej. Cenar fuera, Pizza)..."
+              placeholder="Plato libre (ej. Pizza) — no añade compra"
               value={customText}
               onChange={(e) => setCustomText(e.target.value)}
               className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
@@ -228,17 +251,6 @@ export const RecipeModal: React.FC<RecipeModalProps> = ({
             </button>
           </form>
 
-          {/* Botón para crear receta completa */}
-          <button
-            onClick={() => {
-              onClose();
-              onOpenCreateRecipe();
-            }}
-            className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline whitespace-nowrap"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Crear nueva receta completa</span>
-          </button>
         </div>
 
       </div>

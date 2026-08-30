@@ -55,7 +55,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
   };
 
   const handleReset = () => {
-    if (confirm('¿Restablecer todo a las recetas iniciales por defecto?')) {
+    if (confirm('¿Restablecer recetas, planes, listas, despensa y raciones a los valores iniciales?')) {
       Storage.resetToDefaults();
       onDataReload();
       onClose();
@@ -106,7 +106,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
             <div>
               <h4 className="font-bold text-sm text-slate-900">Descargar Copia (JSON)</h4>
-              <p className="text-xs text-slate-500">Guarda todas tus recetas y semanas en un archivo</p>
+              <p className="text-xs text-slate-500">Guarda recetas, semanas, listas, despensa y raciones</p>
             </div>
             <button
               onClick={handleExport}
@@ -142,7 +142,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
               className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-rose-600 transition-colors font-medium"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Restablecer recetas por defecto</span>
+              <span>Restablecer todo a valores iniciales</span>
             </button>
           </div>
 

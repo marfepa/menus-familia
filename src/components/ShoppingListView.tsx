@@ -8,6 +8,7 @@ import {
   CATEGORY_LABELS,
   PACKAGE_FORMAT_CONFIG,
   ShoppingPeriod,
+  PantryItem,
 } from '@/types';
 import { formatShoppingListForShare } from '@/lib/shoppingListGenerator';
 import { formatWeekRange } from '@/lib/utils';
@@ -29,6 +30,7 @@ import {
   Package,
   Store,
   Info,
+  Refrigerator,
 } from 'lucide-react';
 
 interface ShoppingListViewProps {
@@ -45,6 +47,8 @@ interface ShoppingListViewProps {
   onDeleteItem: (itemId: string) => void;
   onClearChecked: () => void;
   onRegenerateFromMenu: () => void;
+  pantry: PantryItem[];
+  onTogglePantryItem: (id: string) => void;
 }
 
 export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
@@ -55,8 +59,11 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   onDeleteItem,
   onClearChecked,
   onRegenerateFromMenu,
+  pantry,
+  onTogglePantryItem,
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<ShoppingPeriod>('all');
+  const [storeMode, setStoreMode] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customQty, setCustomQty] = useState<string>('');
   const [customUnit, setCustomUnit] = useState('');
@@ -196,6 +203,16 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
               <Printer className="w-3.5 h-3.5" />
               <span>Imprimir</span>
             </button>
+
+            <button
+              onClick={() => setStoreMode(!storeMode)}
+              className={`flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all ${
+                storeMode ? 'bg-emerald-400 text-emerald-950' : 'text-white bg-white/15 hover:bg-white/25'
+              }`}
+            >
+              <ShoppingBag className="w-3.5 h-3.5" />
+              <span>{storeMode ? 'Modo súper ON' : 'Modo súper'}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -285,8 +302,32 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
         </div>
       )}
 
-      {/* Formulario para Añadir Artículos Manuales (Fuera de Menú) */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs no-print">
+        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+          <Refrigerator className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Ya lo tengo (se resta de la lista)</span>
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {pantry.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onTogglePantryItem(item.id)}
+              className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all min-h-[44px] ${
+                item.inStock
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                  : 'bg-slate-50 border-slate-200 text-slate-500'
+              }`}
+            >
+              {item.inStock ? '✓ ' : ''}
+              {item.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Formulario para Añadir Artículos Manuales (Fuera de Menú) */}
+      <div className={`bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs no-print ${storeMode ? 'hidden' : ''}`}>
         <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
           <Plus className="w-3.5 h-3.5 text-emerald-600" />
           <span>Añadir producto extra (pañales, meriendas infantiles, café, limpieza...)</span>
@@ -397,7 +438,9 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                         <div
                           key={item.id}
                           onClick={() => onToggleItem(item.id)}
-                          className={`group flex items-start justify-between p-3 rounded-xl cursor-pointer transition-all border ${
+                          className={`group flex items-start justify-between rounded-xl cursor-pointer transition-all border ${
+                            storeMode ? 'p-4 min-h-[64px]' : 'p-3'
+                          } ${
                             item.checked
                               ? 'bg-slate-50 border-slate-200/60 opacity-60'
                               : 'bg-white hover:bg-slate-50/90 border-slate-200/90 shadow-2xs hover:shadow-xs'
@@ -409,9 +452,9 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                               className="text-slate-400 group-hover:text-emerald-600 transition-colors mt-0.5 shrink-0"
                             >
                               {item.checked ? (
-                                <CheckCircle2 className="w-5 h-5 text-emerald-600 fill-emerald-100" />
+                                <CheckCircle2 className={`${storeMode ? 'w-8 h-8' : 'w-5 h-5'} text-emerald-600 fill-emerald-100`} />
                               ) : (
-                                <Circle className="w-5 h-5 text-slate-300 group-hover:text-emerald-500" />
+                                <Circle className={`${storeMode ? 'w-8 h-8' : 'w-5 h-5'} text-slate-300 group-hover:text-emerald-500`} />
                               )}
                             </button>
 
@@ -451,7 +494,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                               )}
 
                               {/* Subtexto: consumo en recetas y remanente / residuo cero */}
-                              {item.recipeUsageNote && !item.checked && (
+                              {item.recipeUsageNote && !item.checked && !storeMode && (
                                 <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
                                   <Info className="w-3 h-3 text-slate-400 shrink-0" />
                                   <span>{item.recipeUsageNote}</span>

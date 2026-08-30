@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Recipe, MealSlotData } from '@/types';
-import { Plus, Clock, Star, X, Eye, Sparkles } from 'lucide-react';
+import { getSlotKind } from '@/lib/planUtils';
+import { Plus, Clock, Star, X, Eye } from 'lucide-react';
 
 interface MealSlotProps {
   type: 'lunch' | 'dinner';
@@ -24,8 +25,9 @@ export const MealSlot: React.FC<MealSlotProps> = ({
   const isLunch = type === 'lunch';
   const label = isLunch ? 'Comida' : 'Cena';
   const iconEmoji = isLunch ? '☀️' : '🌙';
+  const kind = getSlotKind(slotData);
 
-  if (!recipe && !slotData?.customName) {
+  if (kind === 'empty') {
     return (
       <div className="group relative rounded-xl border-2 border-dashed border-slate-200 hover:border-emerald-400 bg-white/60 hover:bg-emerald-50/40 p-3 transition-all flex flex-col items-center justify-center min-h-[96px]">
         <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
@@ -42,8 +44,30 @@ export const MealSlot: React.FC<MealSlotProps> = ({
     );
   }
 
-  // Plato personalizado sin receta del catálogo
-  if (!recipe && slotData?.customName) {
+  if (kind === 'out') {
+    return (
+      <div className="relative rounded-xl border border-slate-300 bg-slate-50 p-3 shadow-xs min-h-[96px] flex flex-col justify-between">
+        <div className="flex items-start justify-between gap-1">
+          <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1">
+            <span>{iconEmoji}</span> {label}
+          </span>
+          <button
+            onClick={onClearClick}
+            className="text-slate-400 hover:text-rose-600 p-0.5 rounded-md hover:bg-rose-50 transition-colors"
+            title="Quitar"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <p className="font-semibold text-sm text-slate-800 my-1">Comemos fuera</p>
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-700 w-fit">
+          Sin compra
+        </span>
+      </div>
+    );
+  }
+
+  if (kind === 'custom' || (!recipe && slotData?.customName)) {
     return (
       <div className="relative rounded-xl border border-amber-200 bg-amber-50/60 p-3 shadow-xs hover:shadow transition-all group min-h-[96px] flex flex-col justify-between">
         <div className="flex items-start justify-between gap-1">
@@ -59,7 +83,7 @@ export const MealSlot: React.FC<MealSlotProps> = ({
           </button>
         </div>
         <p className="font-semibold text-sm text-slate-900 line-clamp-2 my-1">
-          {slotData.customName}
+          {slotData?.customName}
         </p>
         <button
           onClick={onAssignClick}
@@ -71,17 +95,26 @@ export const MealSlot: React.FC<MealSlotProps> = ({
     );
   }
 
-  // Plato asignado con receta completa
+  const isLeftover = kind === 'leftover';
+
   return (
-    <div className="relative rounded-xl border border-slate-200 hover:border-emerald-300 bg-white p-3 shadow-sm hover:shadow transition-all group min-h-[96px] flex flex-col justify-between">
+    <div
+      className={`relative rounded-xl border p-3 shadow-sm hover:shadow transition-all group min-h-[96px] flex flex-col justify-between ${
+        isLeftover
+          ? 'border-teal-200 bg-teal-50/70 hover:border-teal-300'
+          : 'border-slate-200 hover:border-emerald-300 bg-white'
+      }`}
+    >
       <div>
         <div className="flex items-center justify-between gap-1 mb-1.5">
-          <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 px-1.5 py-0.5 rounded-md ${
-            isLunch ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'
-          }`}>
+          <span
+            className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 px-1.5 py-0.5 rounded-md ${
+              isLunch ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'
+            }`}
+          >
             <span>{iconEmoji}</span> {label}
           </span>
-          
+
           <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
             <button
               onClick={() => recipe && onViewRecipe(recipe)}
@@ -109,13 +142,18 @@ export const MealSlot: React.FC<MealSlotProps> = ({
       </div>
 
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
-        <div className="flex items-center gap-2">
-          {recipe?.prepTimeMinutes && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {isLeftover && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-teal-100 text-teal-800 font-bold text-[10px]">
+              {isLunch ? 'Tupper / Sobra' : 'Sobra'}
+            </span>
+          )}
+          {!isLeftover && recipe?.prepTimeMinutes ? (
             <span className="flex items-center gap-0.5">
               <Clock className="w-3 h-3 text-slate-400" />
               {recipe.prepTimeMinutes}m
             </span>
-          )}
+          ) : null}
           {recipe?.favorite && (
             <span className="flex items-center gap-0.5 text-amber-500 font-medium">
               <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
