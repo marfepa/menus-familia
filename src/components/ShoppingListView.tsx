@@ -1,7 +1,14 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { ShoppingItem, IngredientCategory, CATEGORY_LABELS, ShoppingPeriod } from '@/types';
+import {
+  ShoppingItem,
+  IngredientCategory,
+  PackageFormat,
+  CATEGORY_LABELS,
+  PACKAGE_FORMAT_CONFIG,
+  ShoppingPeriod,
+} from '@/types';
 import { formatShoppingListForShare } from '@/lib/shoppingListGenerator';
 import { formatWeekRange } from '@/lib/utils';
 import {
@@ -19,14 +26,22 @@ import {
   Globe,
   Copy,
   Check,
-  Package
+  Package,
+  Store,
+  Info,
 } from 'lucide-react';
 
 interface ShoppingListViewProps {
   items: ShoppingItem[];
   weekStartDate: string;
   onToggleItem: (itemId: string) => void;
-  onAddItem: (name: string, quantity: number | undefined, unit: string, category: IngredientCategory) => void;
+  onAddItem: (
+    name: string,
+    quantity: number | undefined,
+    unit: string,
+    category: IngredientCategory,
+    packageFormat?: PackageFormat
+  ) => void;
   onDeleteItem: (itemId: string) => void;
   onClearChecked: () => void;
   onRegenerateFromMenu: () => void;
@@ -46,13 +61,14 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   const [customQty, setCustomQty] = useState<string>('');
   const [customUnit, setCustomUnit] = useState('');
   const [customCategory, setCustomCategory] = useState<IngredientCategory>('fruteria');
+  const [customPackageFormat, setCustomPackageFormat] = useState<PackageFormat>('granel');
   const [copied, setCopied] = useState(false);
 
   const weekRange = formatWeekRange(weekStartDate);
 
   // Filtrar items por el tramo seleccionado
   const visibleItems = useMemo(() => {
-    return items.filter(item => {
+    return items.filter((item) => {
       if (selectedPeriod === 'all') return true;
       if (item.isCustom) return true;
       return item.period === selectedPeriod || item.period === 'both';
@@ -62,7 +78,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   // Agrupar items visibles por categoría
   const groupedItems = useMemo(() => {
     const map = new Map<IngredientCategory, ShoppingItem[]>();
-    
+
     const categoryOrder: IngredientCategory[] = [
       'fruteria',
       'carniceria',
@@ -74,9 +90,9 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       'otros',
     ];
 
-    categoryOrder.forEach(cat => map.set(cat, []));
+    categoryOrder.forEach((cat) => map.set(cat, []));
 
-    visibleItems.forEach(item => {
+    visibleItems.forEach((item) => {
       const list = map.get(item.category) || [];
       list.push(item);
       map.set(item.category, list);
@@ -87,7 +103,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
   // Contadores
   const totalCount = visibleItems.length;
-  const checkedCount = visibleItems.filter(i => i.checked).length;
+  const checkedCount = visibleItems.filter((i) => i.checked).length;
   const progressPercent = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0;
 
   const handleShareWhatsApp = () => {
@@ -119,74 +135,76 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       customName.trim(),
       customQty ? parseFloat(customQty) : undefined,
       customUnit.trim(),
-      customCategory
+      customCategory,
+      customPackageFormat
     );
 
     setCustomName('');
     setCustomQty('');
     setCustomUnit('');
+    setCustomPackageFormat('granel');
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
-      
-      {/* Cabecera Principal y Barra de Acciones */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 no-print">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-2xl">🛒</span>
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
-              Lista de la Compra
+      {/* Banner Explicativo de Formatos Comerciales Lidl / Aldi / Consum */}
+      <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 p-6 rounded-3xl text-white shadow-md relative overflow-hidden no-print">
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-emerald-300 text-xs font-bold border border-white/10">
+              <Store className="w-3.5 h-3.5" />
+              <span>Estándar Comercial LIDL · ALDI · CONSUM</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight">
+              Lista de la Compra por Formatos de Lineal
             </h2>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+              Los alimentos se agrupan automáticamente en sus unidades comerciales reales (mallas de 2kg, bandejas protegidas de 500g, botes de 400g, docenas) calculando el aprovechamiento entre recetas para <strong className="text-emerald-300 font-bold">desperdicio cero</strong>.
+            </p>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500">
-            Formato por packs de supermercado para optimizar consumo y reducir desperdicio <span className="font-semibold text-slate-700">({weekRange})</span>.
-          </p>
-        </div>
 
-        {/* Botones de acción */}
-        <div className="flex items-center gap-2 flex-wrap w-full lg:w-auto justify-start lg:justify-end">
-          
-          <button
-            onClick={onRegenerateFromMenu}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
-            title="Sincronizar con los últimos cambios del menú"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Sincronizar menú</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-start md:justify-end shrink-0">
+            <button
+              onClick={onRegenerateFromMenu}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold text-slate-900 bg-white hover:bg-slate-100 rounded-xl transition-all shadow-xs"
+              title="Sincronizar con los últimos cambios del menú"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Sincronizar menú</span>
+            </button>
 
-          <button
-            onClick={handleCopyClipboard}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
-          >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? '¡Copiado!' : 'Copiar texto'}</span>
-          </button>
+            <button
+              onClick={handleCopyClipboard}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold text-white bg-white/15 hover:bg-white/25 rounded-xl transition-all backdrop-blur-sm"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copied ? '¡Copiado!' : 'Copiar'}</span>
+            </button>
 
-          <button
-            onClick={handleShareWhatsApp}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-emerald-950 bg-emerald-400 hover:bg-emerald-300 rounded-xl transition-all shadow-xs"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            <span>WhatsApp ({selectedPeriod === 'weekday' ? 'L-V' : selectedPeriod === 'weekend' ? 'Finde' : 'Todo'})</span>
-          </button>
+            <button
+              onClick={handleShareWhatsApp}
+              className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-black text-emerald-950 bg-emerald-400 hover:bg-emerald-300 rounded-xl transition-all shadow-md"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>WhatsApp</span>
+            </button>
 
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Imprimir</span>
-          </button>
-
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold text-slate-200 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Imprimir</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Selector de División por Tramos de Compra (L-V vs Finde vs Todo) */}
-      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between flex-wrap gap-2 no-print">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 pl-2">
-          <span>Tramo de compra:</span>
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between flex-wrap gap-2 no-print">
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-600 pl-2">
+          <ShoppingBag className="w-4 h-4 text-emerald-600" />
+          <span>Tramo de compra en tienda:</span>
         </div>
 
         <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-full sm:w-auto">
@@ -211,7 +229,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
             }`}
           >
             <Building2 className="w-3.5 h-3.5 text-amber-600" />
-            <span>🏢 L-V Mediodía (Oficina)</span>
+            <span>🏢 L-V Mediodía (Tuppers / Oficina)</span>
           </button>
 
           <button
@@ -223,7 +241,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
             }`}
           >
             <Home className="w-3.5 h-3.5 text-indigo-600" />
-            <span>🏠 Viernes Noche a Domingo</span>
+            <span>🏠 Fin de Semana</span>
           </button>
         </div>
       </div>
@@ -232,17 +250,17 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       {totalCount > 0 && (
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 no-print">
           <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 font-black text-sm">
               {progressPercent}%
             </div>
             <div>
               <p className="text-sm font-bold text-slate-800">
-                {checkedCount} de {totalCount} productos en el carrito
+                {checkedCount} de {totalCount} artículos en el carrito
               </p>
               <p className="text-xs text-slate-500">
                 {totalCount - checkedCount === 0
-                  ? '🎉 ¡Compra completada!'
-                  : `Quedan ${totalCount - checkedCount} artículos por comprar`}
+                  ? '🎉 ¡Lista de la compra completa!'
+                  : `Quedan ${totalCount - checkedCount} productos por coger del lineal`}
               </p>
             </div>
           </div>
@@ -271,16 +289,16 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs no-print">
         <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
           <Plus className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Añadir producto extra (pañales, meriendas niños, café, hogar...)</span>
+          <span>Añadir producto extra (pañales, meriendas infantiles, café, limpieza...)</span>
         </h3>
 
-        <form onSubmit={handleAddCustomSubmit} className="flex flex-col sm:flex-row items-center gap-2">
+        <form onSubmit={handleAddCustomSubmit} className="grid grid-cols-1 sm:grid-cols-12 gap-2">
           <input
             type="text"
-            placeholder="Nombre del producto (ej. Plátanos maduros, Papel cocina)..."
+            placeholder="Nombre del producto (ej. Plátanos de Canarias, Papel cocina)..."
             value={customName}
             onChange={(e) => setCustomName(e.target.value)}
-            className="flex-2 w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+            className="sm:col-span-4 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
           />
 
           <input
@@ -289,21 +307,25 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
             placeholder="Cant."
             value={customQty}
             onChange={(e) => setCustomQty(e.target.value)}
-            className="w-full sm:w-20 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl text-center"
+            className="sm:col-span-2 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl text-center"
           />
 
-          <input
-            type="text"
-            placeholder="Ud (l, kg, pack)"
-            value={customUnit}
-            onChange={(e) => setCustomUnit(e.target.value)}
-            className="w-full sm:w-24 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl text-center"
-          />
+          <select
+            value={customPackageFormat}
+            onChange={(e) => setCustomPackageFormat(e.target.value as PackageFormat)}
+            className="sm:col-span-3 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl font-medium"
+          >
+            {Object.entries(PACKAGE_FORMAT_CONFIG).map(([key, fmt]) => (
+              <option key={key} value={key}>
+                {fmt.emoji} {fmt.label}
+              </option>
+            ))}
+          </select>
 
           <select
             value={customCategory}
             onChange={(e) => setCustomCategory(e.target.value as IngredientCategory)}
-            className="w-full sm:w-auto px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl font-medium"
+            className="sm:col-span-2 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl font-medium"
           >
             {Object.entries(CATEGORY_LABELS).map(([key, cat]) => (
               <option key={key} value={key}>
@@ -315,14 +337,14 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
           <button
             type="submit"
             disabled={!customName.trim()}
-            className="w-full sm:w-auto px-4 py-2 bg-emerald-600 disabled:opacity-50 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-xs transition-all whitespace-nowrap"
+            className="sm:col-span-1 px-4 py-2 bg-emerald-600 disabled:opacity-50 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-xs transition-all flex items-center justify-center"
           >
             Añadir
           </button>
         </form>
       </div>
 
-      {/* Lista agrupada por Secciones / Pasillos */}
+      {/* Lista agrupada por Pasillos Reales de LIDL/ALDI/Consum */}
       {totalCount === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-slate-200">
           <span className="text-4xl">🥑</span>
@@ -343,95 +365,131 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                 className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-5 flex flex-col justify-between"
               >
                 <div>
-                  {/* Título de la sección de supermercado */}
-                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">{catInfo.emoji}</span>
-                      <h3 className="font-bold text-sm text-slate-900">
-                        {catInfo.name}
-                      </h3>
+                  {/* Título de la sección y pasillo de supermercado */}
+                  <div className="pb-3 mb-3 border-b border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{catInfo.emoji}</span>
+                        <h3 className="font-bold text-sm text-slate-900">
+                          {catInfo.name}
+                        </h3>
+                      </div>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                        {catItems.length} {catItems.length === 1 ? 'artículo' : 'artículos'}
+                      </span>
                     </div>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                      {catItems.length}
-                    </span>
+                    {catInfo.aisleTip && (
+                      <p className="text-[11px] text-slate-400 font-medium mt-1 flex items-center gap-1">
+                        <Store className="w-3 h-3 text-slate-400" />
+                        <span>{catInfo.aisleTip}</span>
+                      </p>
+                    )}
                   </div>
 
-                  {/* Items de la sección */}
-                  <div className="space-y-2">
-                    {catItems.map((item) => (
-                      <div
-                        key={item.id}
-                        onClick={() => onToggleItem(item.id)}
-                        className={`group flex items-start justify-between p-2.5 rounded-xl cursor-pointer transition-all border ${
-                          item.checked
-                            ? 'bg-slate-50 border-slate-100 text-slate-400'
-                            : 'bg-white hover:bg-slate-50/80 border-slate-200/70 text-slate-800'
-                        }`}
-                      >
-                        <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                          <button
-                            type="button"
-                            className="text-slate-400 group-hover:text-emerald-600 transition-colors mt-0.5"
-                          >
-                            {item.checked ? (
-                              <CheckCircle2 className="w-5 h-5 text-emerald-600 fill-emerald-100" />
-                            ) : (
-                              <Circle className="w-5 h-5 text-slate-300 group-hover:text-emerald-500" />
-                            )}
-                          </button>
+                  {/* Items de la sección con presentación comercial de supermercado */}
+                  <div className="space-y-2.5">
+                    {catItems.map((item) => {
+                      const pkgConfig = item.packageFormat
+                        ? PACKAGE_FORMAT_CONFIG[item.packageFormat]
+                        : PACKAGE_FORMAT_CONFIG.granel;
 
-                          <div className="min-w-0 flex-1">
-                            <p
-                              className={`text-xs sm:text-sm font-semibold ${
-                                item.checked ? 'line-through text-slate-400 font-normal' : 'text-slate-900'
-                              }`}
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => onToggleItem(item.id)}
+                          className={`group flex items-start justify-between p-3 rounded-xl cursor-pointer transition-all border ${
+                            item.checked
+                              ? 'bg-slate-50 border-slate-200/60 opacity-60'
+                              : 'bg-white hover:bg-slate-50/90 border-slate-200/90 shadow-2xs hover:shadow-xs'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <button
+                              type="button"
+                              className="text-slate-400 group-hover:text-emerald-600 transition-colors mt-0.5 shrink-0"
                             >
-                              {item.name}
-                            </p>
-                            
-                            {/* Badges de Recetas e Indicador de Pack */}
-                            {item.recipeSource && item.recipeSource.length > 0 && !item.checked && (
-                              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                {item.recipeSource.length > 1 && (
-                                  <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800 border border-amber-200">
-                                    <Package className="w-3 h-3" /> Pack compartido ({item.recipeSource.length} recetas)
+                              {item.checked ? (
+                                <CheckCircle2 className="w-5 h-5 text-emerald-600 fill-emerald-100" />
+                              ) : (
+                                <Circle className="w-5 h-5 text-slate-300 group-hover:text-emerald-500" />
+                              )}
+                            </button>
+
+                            <div className="min-w-0 flex-1">
+                              {/* Nombre del producto */}
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p
+                                  className={`text-xs sm:text-sm font-bold ${
+                                    item.checked
+                                      ? 'line-through text-slate-400 font-normal'
+                                      : 'text-slate-900'
+                                  }`}
+                                >
+                                  {item.name}
+                                </p>
+
+                                {/* Badge de tipo de envase comercial */}
+                                {pkgConfig && !item.checked && (
+                                  <span
+                                    className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.2 rounded-md border ${pkgConfig.bg} ${pkgConfig.text} ${pkgConfig.border}`}
+                                  >
+                                    <span>{pkgConfig.emoji}</span>
+                                    <span>{pkgConfig.label}</span>
                                   </span>
                                 )}
-                                <span className="text-[10px] text-slate-400 truncate">
-                                  {item.recipeSource.join(', ')}
-                                </span>
                               </div>
-                            )}
+
+                              {/* Formato de compra recomendado para el súper */}
+                              {item.commercialFormat && (
+                                <p
+                                  className={`text-xs font-bold mt-1 ${
+                                    item.checked ? 'text-slate-400' : 'text-emerald-700'
+                                  }`}
+                                >
+                                  🛒 Comprar: <span className="underline decoration-emerald-300 decoration-2">{item.commercialFormat}</span>
+                                </p>
+                              )}
+
+                              {/* Subtexto: consumo en recetas y remanente / residuo cero */}
+                              {item.recipeUsageNote && !item.checked && (
+                                <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
+                                  <Info className="w-3 h-3 text-slate-400 shrink-0" />
+                                  <span>{item.recipeUsageNote}</span>
+                                </p>
+                              )}
+
+                              {/* Badges de recetas que lo consumen */}
+                              {item.recipeSource && item.recipeSource.length > 0 && !item.checked && (
+                                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                  {item.recipeSource.length > 1 && (
+                                    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-200">
+                                      <Package className="w-3 h-3" /> Pack compartido ({item.recipeSource.length} recetas)
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] text-slate-400 truncate max-w-full">
+                                    {item.recipeSource.join(' · ')}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Botón de eliminar */}
+                          <div className="shrink-0 ml-2 mt-0.5">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteItem(item.id);
+                              }}
+                              className="p-1 rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all no-print"
+                              title="Eliminar de la lista"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </div>
-
-                        {/* Cantidad y botón eliminar */}
-                        <div className="flex items-center gap-2 shrink-0 ml-2 mt-0.5">
-                          {item.quantity !== undefined && (
-                            <span
-                              className={`text-xs font-bold px-2 py-0.5 rounded-md border ${
-                                item.checked
-                                  ? 'bg-slate-100 text-slate-400 border-slate-200'
-                                  : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              }`}
-                            >
-                              {item.quantity} {item.unit || ''}
-                            </span>
-                          )}
-
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteItem(item.id);
-                            }}
-                            className="p-1 rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all no-print"
-                            title="Eliminar de la lista"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -439,7 +497,6 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
           })}
         </div>
       )}
-
     </div>
   );
 };

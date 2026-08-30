@@ -18,7 +18,15 @@ export const Storage = {
         localStorage.setItem(STORAGE_KEYS.RECIPES, JSON.stringify(INITIAL_RECIPES));
         return INITIAL_RECIPES;
       }
-      return JSON.parse(data);
+      const savedRecipes: Recipe[] = JSON.parse(data);
+      const savedIds = new Set(savedRecipes.map(r => r.id));
+      const missingInitial = INITIAL_RECIPES.filter(r => !savedIds.has(r.id));
+      if (missingInitial.length > 0) {
+        const merged = [...savedRecipes, ...missingInitial];
+        localStorage.setItem(STORAGE_KEYS.RECIPES, JSON.stringify(merged));
+        return merged;
+      }
+      return savedRecipes;
     } catch (e) {
       console.error('Error al cargar recetas:', e);
       return INITIAL_RECIPES;

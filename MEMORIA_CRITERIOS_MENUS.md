@@ -87,3 +87,4 @@ Este documento sirve como **registro vivo y manual operativo** para diseñar los
   - Despliegue de la app en Vercel ([menus-familia.vercel.app](https://menus-familia.vercel.app)).
   - Ajuste de los 5 pilares: Verduras fáciles, Gluten-light, Alta proteína, Preparación $\le 20$ min y Batch Cooking / Packs Residuo Cero.
   - Incorporación de fichas de adaptación infantil (BLW + cenas fáciles para niños) y selector de 2 tramos de compra.
+  - **Estandarización de Lista de la Compra al modelo LIDL / ALDI / Consum**: Agrupación automática de ingredientes por formatos comerciales de lineal (mallas de 2kg, bandejas protegidas de 500g, botes de cristal de 400g, docenas de huevos, briks de 1L) con badges visuales de envase y desglose de consumo/aprovechamiento entre recetas.

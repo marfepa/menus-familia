@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Recipe, WeeklyPlan, ShoppingItem, DayOfWeek, IngredientCategory } from '@/types';
+import { Recipe, WeeklyPlan, ShoppingItem, DayOfWeek, IngredientCategory, PackageFormat } from '@/types';
 import { Storage } from '@/lib/storage';
 import { getMonday } from '@/lib/utils';
 import { generateShoppingListFromPlan } from '@/lib/shoppingListGenerator';
@@ -154,7 +154,8 @@ export default function Home() {
     name: string,
     quantity: number | undefined,
     unit: string,
-    category: IngredientCategory
+    category: IngredientCategory,
+    packageFormat?: PackageFormat
   ) => {
     const newItem: ShoppingItem = {
       id: `custom-${Date.now()}`,
@@ -164,6 +165,10 @@ export default function Home() {
       category,
       checked: false,
       isCustom: true,
+      packageFormat: packageFormat || 'granel',
+      commercialFormat: quantity ? `${quantity} ${unit || ''}`.trim() : name,
+      recipeUsageNote: 'Artículo extra personalizado',
+      storeTip: 'Añadido manualmente',
     };
     const updated = [...shoppingItems, newItem];
     setShoppingItems(updated);
