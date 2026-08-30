@@ -45,10 +45,17 @@ export interface Recipe {
   fridgeLifeDays?: number; // Días que aguanta en nevera (ej. 3 días)
 }
 
+export type MealSlotKind = 'recipe' | 'custom' | 'out' | 'leftover';
+
+export type GenerateMode = 'full' | 'dinners' | 'tuppers';
+
 export interface MealSlotData {
+  kind?: MealSlotKind;
   recipeId?: string;
   customName?: string;
   notes?: string;
+  leftoverFromDay?: DayOfWeek;
+  leftoverFromMeal?: 'lunch' | 'dinner';
 }
 
 export interface DayPlan {
@@ -98,6 +105,18 @@ export interface ShoppingItem {
   isCustom?: boolean;
   recipeSource?: string[]; // Nombres de recetas que requieren este ingrediente
   period?: 'weekday' | 'weekend' | 'both'; // Para filtrar por tramo de compra
+}
+
+export interface PantryItem {
+  id: string;
+  name: string;
+  inStock: boolean;
+  matchKeywords: string[];
+}
+
+export interface AppSettings {
+  householdServings: number;
+  generateMode: GenerateMode;
 }
 
 export const PACKAGE_FORMAT_CONFIG: Record<

@@ -3,13 +3,13 @@ import type {
   WeeklyPlan,
   ShoppingItem,
   IngredientCategory,
-  DayOfWeek,
   ShoppingPeriod,
   PackageFormat,
+  PantryItem,
 } from '@/types';
+import { PLAN_DAYS, slotNeedsIngredients } from '@/lib/planUtils';
 
-// Normalizar texto para búsqueda y matching
-function normalizeText(text: string): string {
+export function normalizeText(text: string): string {
   return text
     .toLowerCase()
     .normalize('NFD')
@@ -17,7 +17,35 @@ function normalizeText(text: string): string {
     .trim();
 }
 
-interface SupermarketProductRule {
+export function canonicalAmount(qty: number, unit: string): { qty: number; unit: string } {
+  const u = normalizeText(unit);
+  if (u === 'kg' || u === 'kilo' || u === 'kilos') return { qty: qty * 1000, unit: 'g' };
+  if (u === 'l' || u === 'litro' || u === 'litros') return { qty: qty * 1000, unit: 'ml' };
+  if (u === 'gr' || u === 'gramos' || u === 'g') return { qty, unit: 'g' };
+  if (u === 'ml' || u === 'mililitros') return { qty, unit: 'ml' };
+  if (['ud', 'uds', 'unidad', 'unidades'].includes(u)) return { qty, unit: 'uds' };
+  if (u === 'vasito' || u === 'vasitos') return { qty: qty * 125, unit: 'g' };
+  return { qty, unit: u || 'uds' };
+}
+
+export function isCoveredByPantry(ingredientName: string, pantry: PantryItem[] = []): boolean {
+  const n = normalizeText(ingredientName);
+  return pantry.some((item) => {
+    if (!item.inStock) return false;
+    return item.matchKeywords
+      .slice()
+      .sort((a, b) => b.length - a.length)
+      .some((kw) => {
+        const nk = normalizeText(kw);
+        if (nk.length <= 3) {
+          return new RegExp(`(^|[^a-z0-9])${nk}([^a-z0-9]|$)`).test(n);
+        }
+        return n.includes(nk);
+      });
+  });
+}
+
+export interface SupermarketProductRule {
   id: string;
   matchKeywords: string[];
   commercialName: string;
@@ -36,7 +64,7 @@ const SUPERMARKET_RULES: SupermarketProductRule[] = [
   // --- CARNICERÍA Y AVES (LIDL/ALDI/CONSUM: Mural refrigerado / Bandejas atmósfera protectora) ---
   {
     id: 'pollo_pechuga',
-    matchKeywords: ['pollo', 'pechuga', 'pechugas'],
+    matchKeywords: ['pechuga de pollo', 'pollo en dados', 'pechugas de pollo', 'pechuga', 'pechugas'],
     commercialName: 'Pechuga de pollo fileteada / en dados',
     category: 'carniceria',
     packageFormat: 'bandeja',
@@ -483,18 +511,34 @@ const SUPERMARKET_RULES: SupermarketProductRule[] = [
     },
   },
   {
-    id: 'ajos_perejil',
-    matchKeywords: ['ajo', 'ajos', 'perejil', 'dientes de ajo'],
-    commercialName: 'Ajos (malla) y Perejil fresco',
+    id: 'ajos',
+    matchKeywords: ['dientes de ajo', 'diente de ajo', 'ajos', 'ajo'],
+    commercialName: 'Ajos (malla)',
     category: 'fruteria',
     packageFormat: 'malla',
-    supermarketTip: 'Frutería: Malla ajos 4 cabezas + Manojo perejil',
-    computeFormat: (qty, _unit, recipeCount) => {
+    supermarketTip: 'Frutería: Malla ajos 4 cabezas',
+    computeFormat: (_qty, _unit, recipeCount) => {
       return {
-        commercialFormat: '1 Malla de ajos + 1 Manojo perejil',
+        commercialFormat: '1 Malla de ajos (4 cabezas)',
         recipeUsageNote: `Usa en ${recipeCount} recetas · Fondo despensa`,
         suggestedPacks: 1,
-        commercialUnit: 'Malla + Manojo',
+        commercialUnit: 'Malla (4 cabezas)',
+      };
+    },
+  },
+  {
+    id: 'perejil',
+    matchKeywords: ['perejil fresco', 'perejil'],
+    commercialName: 'Perejil fresco',
+    category: 'fruteria',
+    packageFormat: 'manojo',
+    supermarketTip: 'Frutería: Manojo perejil',
+    computeFormat: (_qty, _unit, recipeCount) => {
+      return {
+        commercialFormat: '1 Manojo de perejil',
+        recipeUsageNote: `Usa en ${recipeCount} recetas`,
+        suggestedPacks: 1,
+        commercialUnit: 'Manojo',
       };
     },
   },
@@ -882,28 +926,52 @@ const SUPERMARKET_RULES: SupermarketProductRule[] = [
   },
 ];
 
-// Encontrar la regla adecuada para un ingrediente
-function findRuleForIngredient(ingredientName: string): SupermarketProductRule | null {
+export function findRuleForIngredient(ingredientName: string): SupermarketProductRule | null {
   const normName = normalizeText(ingredientName);
+  let best: SupermarketProductRule | null = null;
+  let bestLen = 0;
   for (const rule of SUPERMARKET_RULES) {
     for (const kw of rule.matchKeywords) {
       const normKw = normalizeText(kw);
-      if (normName.includes(normKw)) {
-        return rule;
+      if (!normKw) continue;
+      const matches =
+        normKw.length <= 3
+          ? new RegExp(`(^|[^a-z0-9])${normKw}([^a-z0-9]|$)`).test(normName)
+          : normName.includes(normKw);
+      if (matches && normKw.length > bestLen) {
+        best = rule;
+        bestLen = normKw.length;
       }
     }
   }
-  return null;
+  return best;
+}
+
+export interface GenerateShoppingListOptions {
+  existingShoppingList?: ShoppingItem[] | null;
+  householdServings?: number;
+  pantry?: PantryItem[];
+}
+
+function stableItemId(displayName: string, ruleId?: string): string {
+  const slug = normalizeText(ruleId || displayName).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return `item-${slug.slice(0, 48)}`;
 }
 
 export function generateShoppingListFromPlan(
   plan: WeeklyPlan,
   recipes: Recipe[],
-  existingShoppingList: ShoppingItem[] | null = null
+  options: GenerateShoppingListOptions | ShoppingItem[] | null = null
 ): ShoppingItem[] {
+  const opts: GenerateShoppingListOptions = Array.isArray(options) || options === null
+    ? { existingShoppingList: options }
+    : options;
+  const existingShoppingList = opts.existingShoppingList || null;
+  const householdServings = opts.householdServings ?? 4;
+  const pantry = opts.pantry || [];
+
   const recipeMap = new Map<string, Recipe>(recipes.map((r) => [r.id, r]));
 
-  // Mapa de clave agrupada: canonicalKey -> Accumulator
   const aggregatedMap = new Map<
     string,
     {
@@ -917,44 +985,46 @@ export function generateShoppingListFromPlan(
     }
   >();
 
-  const days: DayOfWeek[] = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
-
-  days.forEach((dayKey) => {
+  PLAN_DAYS.forEach((dayKey) => {
     const dayPlan = plan.days[dayKey];
     if (!dayPlan) return;
 
     const isWeekendDay = dayKey === 'sabado' || dayKey === 'domingo';
 
-    // Comida
-    if (dayPlan.lunch?.recipeId) {
+    if (slotNeedsIngredients(dayPlan.lunch) && dayPlan.lunch?.recipeId) {
       const recipe = recipeMap.get(dayPlan.lunch.recipeId);
       if (recipe) {
-        const period: 'weekday' | 'weekend' = isWeekendDay ? 'weekend' : 'weekday';
-        processRecipeIngredients(recipe, period);
+        processRecipeIngredients(recipe, isWeekendDay ? 'weekend' : 'weekday');
       }
     }
 
-    // Cena (Viernes noche cuenta para fin de semana)
-    if (dayPlan.dinner?.recipeId) {
+    if (slotNeedsIngredients(dayPlan.dinner) && dayPlan.dinner?.recipeId) {
       const recipe = recipeMap.get(dayPlan.dinner.recipeId);
       if (recipe) {
-        const period: 'weekday' | 'weekend' = dayKey === 'viernes' || isWeekendDay ? 'weekend' : 'weekday';
+        const period: 'weekday' | 'weekend' =
+          dayKey === 'viernes' || isWeekendDay ? 'weekend' : 'weekday';
         processRecipeIngredients(recipe, period);
       }
     }
   });
 
   function processRecipeIngredients(recipe: Recipe, period: 'weekday' | 'weekend') {
+    const scale = householdServings / (recipe.servings || 4);
     recipe.ingredients.forEach((ing) => {
+      if (isCoveredByPantry(ing.name, pantry)) return;
+
       const rule = findRuleForIngredient(ing.name);
       const groupKey = rule ? rule.id : normalizeText(ing.name);
-      const unit = ing.unit || '';
+      const rawQty = (ing.quantity || 1) * scale;
+      const canonical = canonicalAmount(rawQty, ing.unit || '');
       const category = rule ? rule.category : ing.category || 'otros';
 
       if (aggregatedMap.has(groupKey)) {
         const item = aggregatedMap.get(groupKey)!;
-        if (ing.quantity && item.totalQty !== undefined) {
-          item.totalQty += ing.quantity;
+        if (item.unit === canonical.unit) {
+          item.totalQty += canonical.qty;
+        } else {
+          item.totalQty += canonical.qty;
         }
         item.recipeSources.add(recipe.name);
         item.periods.add(period);
@@ -962,8 +1032,8 @@ export function generateShoppingListFromPlan(
         aggregatedMap.set(groupKey, {
           rule,
           rawName: ing.name,
-          totalQty: ing.quantity || 1,
-          unit: unit,
+          totalQty: canonical.qty,
+          unit: canonical.unit,
           category,
           recipeSources: new Set([recipe.name]),
           periods: new Set([period]),
@@ -972,7 +1042,6 @@ export function generateShoppingListFromPlan(
     });
   }
 
-  // Convertir a ShoppingItem[] enriquecidos con el estándar de Lidl / Aldi / Consum
   const generatedItems: ShoppingItem[] = Array.from(aggregatedMap.values()).map((agg) => {
     const recipeNames = Array.from(agg.recipeSources);
     const recipeCount = recipeNames.length;
@@ -984,7 +1053,7 @@ export function generateShoppingListFromPlan(
       period = 'weekend';
     }
 
-    let commercialFormat = `${agg.totalQty > 0 ? agg.totalQty : ''} ${agg.unit}`.trim();
+    let commercialFormat = `${agg.totalQty > 0 ? Math.round(agg.totalQty * 10) / 10 : ''} ${agg.unit}`.trim();
     let recipeUsageNote = `Usado en ${recipeCount} ${recipeCount === 1 ? 'receta' : 'recetas'}`;
     let packageFormat: PackageFormat = 'granel';
     let storeTip = 'Supermercado';
@@ -1003,13 +1072,16 @@ export function generateShoppingListFromPlan(
       displayName = agg.rule.commercialName;
     }
 
-    // Comprobar si ya estaba marcado como comprado previamente
+    const itemId = stableItemId(displayName, agg.rule?.id);
     const existing = existingShoppingList?.find(
-      (e) => normalizeText(e.name) === normalizeText(displayName) || normalizeText(e.name) === normalizeText(agg.rawName)
+      (e) =>
+        e.id === itemId ||
+        normalizeText(e.name) === normalizeText(displayName) ||
+        normalizeText(e.name) === normalizeText(agg.rawName)
     );
 
     return {
-      id: `item-${normalizeText(displayName).replace(/\s+/g, '-').slice(0, 20)}-${Math.random().toString(36).substring(2, 6)}`,
+      id: itemId,
       name: displayName,
       quantity: suggestedPacks,
       unit: commercialUnit,

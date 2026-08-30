@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node --experimental-strip-types --import ./scripts/ts-alias.mjs --test src/lib/menuGenerator.test.ts src/lib/shoppingListGenerator.test.ts"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",

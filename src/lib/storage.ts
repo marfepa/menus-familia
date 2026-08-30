@@ -1,17 +1,43 @@
-import { Recipe, WeeklyPlan, ShoppingItem } from '@/types';
+import type { Recipe, WeeklyPlan, ShoppingItem, AppSettings, PantryItem } from '@/types';
 import { INITIAL_RECIPES } from '@/data/initialRecipes';
+import { DEFAULT_PANTRY, DEFAULT_SETTINGS } from '@/data/defaultPantry';
+import { emptyWeeklyPlan, removeRecipeFromPlans } from '@/lib/planUtils';
 
 const STORAGE_KEYS = {
   RECIPES: 'recetario_familia_recipes_v3',
   PLANS: 'recetario_familia_plans_v3',
   SHOPPING_LISTS: 'recetario_familia_shopping_v3',
-  CUSTOM_ITEMS: 'recetario_familia_custom_items_v3',
+  SETTINGS: 'recetario_familia_settings_v4',
+  PANTRY: 'recetario_familia_pantry_v4',
 };
 
+function canUseStorage(): boolean {
+  return typeof window !== 'undefined';
+}
+
+function readJson<T>(key: string, fallback: T): T {
+  if (!canUseStorage()) return fallback;
+  try {
+    const data = localStorage.getItem(key);
+    return data ? (JSON.parse(data) as T) : fallback;
+  } catch (e) {
+    console.error(`Error al leer ${key}:`, e);
+    return fallback;
+  }
+}
+
+function writeJson(key: string, value: unknown): void {
+  if (!canUseStorage()) return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.error(`Error al guardar ${key}:`, e);
+  }
+}
+
 export const Storage = {
-  // Recetas
   getRecipes(): Recipe[] {
-    if (typeof window === 'undefined') return INITIAL_RECIPES;
+    if (!canUseStorage()) return INITIAL_RECIPES;
     try {
       const data = localStorage.getItem(STORAGE_KEYS.RECIPES);
       if (!data) {
@@ -19,8 +45,8 @@ export const Storage = {
         return INITIAL_RECIPES;
       }
       const savedRecipes: Recipe[] = JSON.parse(data);
-      const savedIds = new Set(savedRecipes.map(r => r.id));
-      const missingInitial = INITIAL_RECIPES.filter(r => !savedIds.has(r.id));
+      const savedIds = new Set(savedRecipes.map((r) => r.id));
+      const missingInitial = INITIAL_RECIPES.filter((r) => !savedIds.has(r.id));
       if (missingInitial.length > 0) {
         const merged = [...savedRecipes, ...missingInitial];
         localStorage.setItem(STORAGE_KEYS.RECIPES, JSON.stringify(merged));
@@ -34,62 +60,35 @@ export const Storage = {
   },
 
   saveRecipes(recipes: Recipe[]): void {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(STORAGE_KEYS.RECIPES, JSON.stringify(recipes));
-    } catch (e) {
-      console.error('Error al guardar recetas:', e);
-    }
+    writeJson(STORAGE_KEYS.RECIPES, recipes);
   },
 
-  // Planes Semanales
   getPlans(): Record<string, WeeklyPlan> {
-    if (typeof window === 'undefined') return {};
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.PLANS);
-      return data ? JSON.parse(data) : {};
-    } catch (e) {
-      console.error('Error al cargar planes:', e);
-      return {};
-    }
+    return readJson<Record<string, WeeklyPlan>>(STORAGE_KEYS.PLANS, {});
   },
 
   getPlanForWeek(weekStartDate: string): WeeklyPlan {
     const plans = this.getPlans();
-    if (plans[weekStartDate]) {
-      return plans[weekStartDate];
-    }
-    // Plan vacío por defecto para la semana
-    const emptyPlan: WeeklyPlan = {
-      id: `plan-${weekStartDate}`,
-      weekStartDate,
-      days: {
-        lunes: {},
-        martes: {},
-        miercoles: {},
-        jueves: {},
-        viernes: {},
-        sabado: {},
-        domingo: {},
-      },
-    };
-    return emptyPlan;
+    return plans[weekStartDate] || emptyWeeklyPlan(weekStartDate);
   },
 
   savePlan(plan: WeeklyPlan): void {
-    if (typeof window === 'undefined') return;
-    try {
-      const plans = this.getPlans();
-      plans[plan.weekStartDate] = plan;
-      localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(plans));
-    } catch (e) {
-      console.error('Error al guardar plan semanal:', e);
-    }
+    const plans = this.getPlans();
+    plans[plan.weekStartDate] = plan;
+    writeJson(STORAGE_KEYS.PLANS, plans);
   },
 
-  // Listas de la compra persistentes por semana
+  savePlans(plans: Record<string, WeeklyPlan>): void {
+    writeJson(STORAGE_KEYS.PLANS, plans);
+  },
+
+  removeRecipeFromAllPlans(recipeId: string): void {
+    const cleaned = removeRecipeFromPlans(this.getPlans(), recipeId);
+    this.savePlans(cleaned);
+  },
+
   getShoppingList(weekStartDate: string): ShoppingItem[] | null {
-    if (typeof window === 'undefined') return null;
+    if (!canUseStorage()) return null;
     try {
       const data = localStorage.getItem(`${STORAGE_KEYS.SHOPPING_LISTS}_${weekStartDate}`);
       return data ? JSON.parse(data) : null;
@@ -100,25 +99,85 @@ export const Storage = {
   },
 
   saveShoppingList(weekStartDate: string, items: ShoppingItem[]): void {
-    if (typeof window === 'undefined') return;
+    if (!canUseStorage()) return;
     try {
-      localStorage.setItem(`${STORAGE_KEYS.SHOPPING_LISTS}_${weekStartDate}`, JSON.stringify(items));
+      localStorage.setItem(
+        `${STORAGE_KEYS.SHOPPING_LISTS}_${weekStartDate}`,
+        JSON.stringify(items)
+      );
     } catch (e) {
       console.error('Error al guardar lista de compra:', e);
     }
   },
 
-  // Exportar backup
+  getAllShoppingLists(): Record<string, ShoppingItem[]> {
+    if (!canUseStorage()) return {};
+    const lists: Record<string, ShoppingItem[]> = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(`${STORAGE_KEYS.SHOPPING_LISTS}_`)) {
+          const week = key.slice(`${STORAGE_KEYS.SHOPPING_LISTS}_`.length);
+          const raw = localStorage.getItem(key);
+          if (raw) lists[week] = JSON.parse(raw);
+        }
+      }
+    } catch (e) {
+      console.error('Error al leer listas de compra:', e);
+    }
+    return lists;
+  },
+
+  saveAllShoppingLists(lists: Record<string, ShoppingItem[]>): void {
+    if (!canUseStorage()) return;
+    Object.entries(lists).forEach(([week, items]) => {
+      this.saveShoppingList(week, items);
+    });
+  },
+
+  getSettings(): AppSettings {
+    const saved = readJson<Partial<AppSettings> | null>(STORAGE_KEYS.SETTINGS, null);
+    return {
+      ...DEFAULT_SETTINGS,
+      ...(saved || {}),
+    };
+  },
+
+  saveSettings(settings: AppSettings): void {
+    writeJson(STORAGE_KEYS.SETTINGS, settings);
+  },
+
+  getPantry(): PantryItem[] {
+    const saved = readJson<PantryItem[] | null>(STORAGE_KEYS.PANTRY, null);
+    if (!saved || !Array.isArray(saved) || saved.length === 0) {
+      return DEFAULT_PANTRY.map((item) => ({ ...item }));
+    }
+    const savedMap = new Map(saved.map((item) => [item.id, item]));
+    const merged = DEFAULT_PANTRY.map((def) => {
+      const prev = savedMap.get(def.id);
+      return prev ? { ...def, inStock: prev.inStock } : { ...def };
+    });
+    const extras = saved.filter((item) => !DEFAULT_PANTRY.some((d) => d.id === item.id));
+    return [...merged, ...extras];
+  },
+
+  savePantry(pantry: PantryItem[]): void {
+    writeJson(STORAGE_KEYS.PANTRY, pantry);
+  },
+
   exportBackup(): string {
     const backup = {
       timestamp: new Date().toISOString(),
+      version: 4,
       recipes: this.getRecipes(),
       plans: this.getPlans(),
+      shoppingLists: this.getAllShoppingLists(),
+      settings: this.getSettings(),
+      pantry: this.getPantry(),
     };
     return JSON.stringify(backup, null, 2);
   },
 
-  // Importar backup
   importBackup(jsonString: string): boolean {
     try {
       const parsed = JSON.parse(jsonString);
@@ -126,7 +185,16 @@ export const Storage = {
         this.saveRecipes(parsed.recipes);
       }
       if (parsed.plans && typeof parsed.plans === 'object') {
-        localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(parsed.plans));
+        writeJson(STORAGE_KEYS.PLANS, parsed.plans);
+      }
+      if (parsed.shoppingLists && typeof parsed.shoppingLists === 'object') {
+        this.saveAllShoppingLists(parsed.shoppingLists);
+      }
+      if (parsed.settings && typeof parsed.settings === 'object') {
+        this.saveSettings({ ...DEFAULT_SETTINGS, ...parsed.settings });
+      }
+      if (parsed.pantry && Array.isArray(parsed.pantry)) {
+        this.savePantry(parsed.pantry);
       }
       return true;
     } catch (e) {
@@ -135,9 +203,19 @@ export const Storage = {
     }
   },
 
-  // Restaurar valores iniciales
   resetToDefaults(): void {
-    if (typeof window === 'undefined') return;
+    if (!canUseStorage()) return;
     localStorage.setItem(STORAGE_KEYS.RECIPES, JSON.stringify(INITIAL_RECIPES));
-  }
+    localStorage.removeItem(STORAGE_KEYS.PLANS);
+    localStorage.removeItem(STORAGE_KEYS.SETTINGS);
+    localStorage.removeItem(STORAGE_KEYS.PANTRY);
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(`${STORAGE_KEYS.SHOPPING_LISTS}_`)) {
+        toRemove.push(key);
+      }
+    }
+    toRemove.forEach((key) => localStorage.removeItem(key));
+  },
 };
