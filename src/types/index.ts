@@ -16,8 +16,9 @@ export interface Ingredient {
   id: string;
   name: string;
   quantity?: number;
-  unit?: string; // ej. 'g', 'kg', 'ml', 'l', 'uds', 'cucharadas', 'latas'
+  unit?: string; // ej. 'g', 'kg', 'ml', 'l', 'uds', 'cucharadas', 'latas', 'bandeja', 'bolsa', 'malla'
   category: IngredientCategory;
+  packNote?: string; // ej. "1 bolsa (1kg) - usado en 2 recetas"
   notes?: string;
 }
 
@@ -36,6 +37,12 @@ export interface Recipe {
   notes?: string;
   emoji?: string;
   difficulty?: 'Fácil' | 'Media' | 'Avanzada';
+  
+  // Nuevos campos de optimización familiar
+  kidsNotes?: string; // Adaptación específica para bebé que empieza sólidos (BLW) y niño que come poco
+  isTupperFriendly?: boolean; // Apto para llevar en tupper al trabajo y recalentar
+  batchCooking?: boolean; // Se puede cocinar cantidad doble para comer varios días
+  fridgeLifeDays?: number; // Días que aguanta en nevera (ej. 3 días)
 }
 
 export interface MealSlotData {
@@ -63,6 +70,8 @@ export interface WeeklyPlan {
   };
 }
 
+export type ShoppingPeriod = 'all' | 'weekday' | 'weekend';
+
 export interface ShoppingItem {
   id: string;
   name: string;
@@ -72,6 +81,7 @@ export interface ShoppingItem {
   checked: boolean;
   isCustom?: boolean;
   recipeSource?: string[]; // Nombres de recetas que requieren este ingrediente
+  period?: 'weekday' | 'weekend' | 'both'; // Para filtrar por tramo de compra
 }
 
 export const CATEGORY_LABELS: Record<IngredientCategory, { name: string; emoji: string; color: string }> = {

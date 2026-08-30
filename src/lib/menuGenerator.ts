@@ -83,13 +83,15 @@ export function generateSmartWeeklyPlan(
       }
     }
 
-    // Priorizar favoritos, recetas rápidas (<20min) y alto en proteína
+    // Priorizar favoritos, recetas rápidas (<20min), aptas para tupper y alto en proteína
     const weightedPool: Recipe[] = [];
     available.forEach(r => {
       let weight = 1;
       if (r.favorite && options.prioritizeFavorites) weight += 3;
       if (r.tags.includes('Rápido (<20min)')) weight += 2;
       if (r.tags.includes('AltoEnProteina')) weight += 2;
+      if (!isDinner && r.isTupperFriendly) weight += 3; // Gran prioridad para tuppers de oficina a mediodía
+      if (r.batchCooking) weight += 2; // Prioridad para cocinar doble
       if (r.rating >= 4) weight += (r.rating - 3);
       for (let i = 0; i < weight; i++) {
         weightedPool.push(r);

@@ -1,6 +1,6 @@
-import { Recipe, WeeklyPlan, ShoppingItem, IngredientCategory, DayOfWeek } from '@/types';
+import { Recipe, WeeklyPlan, ShoppingItem, IngredientCategory, DayOfWeek, ShoppingPeriod } from '@/types';
 
-// Normalizar nombres de ingredientes para agrupar (ej. "Cebolla", "cebollas", "Cebolla dulce")
+// Normalizar nombres de ingredientes para agrupar
 function normalizeIngredientName(name: string): string {
   return name.trim().toLowerCase();
 }
@@ -20,6 +20,7 @@ export function generateShoppingListFromPlan(
     unit?: string;
     category: IngredientCategory;
     recipeSources: Set<string>;
+    periods: Set<'weekday' | 'weekend'>;
   }>();
 
   const days: DayOfWeek[] = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
@@ -28,46 +29,71 @@ export function generateShoppingListFromPlan(
     const dayPlan = plan.days[dayKey];
     if (!dayPlan) return;
 
-    // Procesar comida y cena
-    ['lunch', 'dinner'].forEach((mealKey) => {
-      const meal = dayPlan[mealKey as 'lunch' | 'dinner'];
-      if (!meal || !meal.recipeId) return;
+    const isWeekendDay = dayKey === 'sabado' || dayKey === 'domingo';
 
-      const recipe = recipeMap.get(meal.recipeId);
-      if (!recipe) return;
+    // Comida
+    if (dayPlan.lunch?.recipeId) {
+      const recipe = recipeMap.get(dayPlan.lunch.recipeId);
+      if (recipe) {
+        const period: 'weekday' | 'weekend' = isWeekendDay ? 'weekend' : 'weekday';
+        addRecipeIngredients(recipe, period, itemsMap);
+      }
+    }
 
-      recipe.ingredients.forEach((ing) => {
-        const normName = normalizeIngredientName(ing.name);
-        const unit = ing.unit || '';
-        const category = ing.category || 'otros';
-        const key = `${normName}|${unit}|${category}`;
-
-        if (itemsMap.has(key)) {
-          const item = itemsMap.get(key)!;
-          if (ing.quantity && item.quantity !== undefined) {
-            item.quantity += ing.quantity;
-          }
-          item.recipeSources.add(recipe.name);
-        } else {
-          itemsMap.set(key, {
-            id: `item-${Math.random().toString(36).substring(2, 9)}`,
-            name: ing.name, // Mantener el nombre original capitalizado
-            quantity: ing.quantity || 0,
-            unit: ing.unit,
-            category: category,
-            recipeSources: new Set([recipe.name]),
-          });
-        }
-      });
-    });
+    // Cena (Viernes noche cuenta para fin de semana)
+    if (dayPlan.dinner?.recipeId) {
+      const recipe = recipeMap.get(dayPlan.dinner.recipeId);
+      if (recipe) {
+        const period: 'weekday' | 'weekend' = (dayKey === 'viernes' || isWeekendDay) ? 'weekend' : 'weekday';
+        addRecipeIngredients(recipe, period, itemsMap);
+      }
+    }
   });
+
+  function addRecipeIngredients(
+    recipe: Recipe,
+    period: 'weekday' | 'weekend',
+    map: typeof itemsMap
+  ) {
+    recipe.ingredients.forEach((ing) => {
+      const normName = normalizeIngredientName(ing.name);
+      const unit = ing.unit || '';
+      const category = ing.category || 'otros';
+      const key = `${normName}|${unit}|${category}`;
+
+      if (map.has(key)) {
+        const item = map.get(key)!;
+        if (ing.quantity && item.quantity !== undefined) {
+          item.quantity += ing.quantity;
+        }
+        item.recipeSources.add(recipe.name);
+        item.periods.add(period);
+      } else {
+        map.set(key, {
+          id: `item-${Math.random().toString(36).substring(2, 9)}`,
+          name: ing.name,
+          quantity: ing.quantity || 0,
+          unit: ing.unit,
+          category: category,
+          recipeSources: new Set([recipe.name]),
+          periods: new Set([period]),
+        });
+      }
+    });
+  }
 
   // Convertir a lista final
   const generatedItems: ShoppingItem[] = Array.from(itemsMap.values()).map(item => {
-    // Si ya existía en la lista y estaba marcado como checked, preservar el estado
     const existing = existingShoppingList?.find(
       e => normalizeIngredientName(e.name) === normalizeIngredientName(item.name)
     );
+
+    let period: 'weekday' | 'weekend' | 'both' = 'weekday';
+    if (item.periods.has('weekday') && item.periods.has('weekend')) {
+      period = 'both';
+    } else if (item.periods.has('weekend')) {
+      period = 'weekend';
+    }
 
     return {
       id: item.id,
@@ -78,10 +104,11 @@ export function generateShoppingListFromPlan(
       checked: existing ? existing.checked : false,
       isCustom: false,
       recipeSource: Array.from(item.recipeSources),
+      period,
     };
   });
 
-  // Añadir items manuales/personalizados que ya estuvieran en la lista existente
+  // Añadir items manuales personalizados existentes
   if (existingShoppingList) {
     existingShoppingList
       .filter(item => item.isCustom)
@@ -109,19 +136,34 @@ export function generateShoppingListFromPlan(
   });
 }
 
-// Formatear texto para WhatsApp o portapapeles
-export function formatShoppingListForShare(items: ShoppingItem[], weekRange: string): string {
-  const byCategory: Record<string, ShoppingItem[]> = {};
+// Formatear texto para WhatsApp según el tramo seleccionado
+export function formatShoppingListForShare(
+  items: ShoppingItem[],
+  weekRange: string,
+  period: ShoppingPeriod = 'all'
+): string {
+  const filteredItems = items.filter(item => {
+    if (period === 'all') return true;
+    if (item.isCustom) return true;
+    return item.period === period || item.period === 'both';
+  });
 
-  items.forEach(item => {
+  const byCategory: Record<string, ShoppingItem[]> = {};
+  filteredItems.forEach(item => {
     if (!byCategory[item.category]) {
       byCategory[item.category] = [];
     }
     byCategory[item.category].push(item);
   });
 
-  let text = `🛒 *LISTA DE LA COMPRA (${weekRange})*\n`;
-  text += `═══════════════════════════\n\n`;
+  const periodTitles: Record<ShoppingPeriod, string> = {
+    all: `🛒 *LISTA DE LA COMPRA SEMANAL* (${weekRange})`,
+    weekday: `🏢 *LISTA DE COMPRA: LUNES A VIERNES MEDIODÍA* (Semana laboral y tuppers)`,
+    weekend: `🏠 *LISTA DE COMPRA: FIN DE SEMANA* (Viernes noche a Domingo)`,
+  };
+
+  let text = `${periodTitles[period]}\n`;
+  text += `═════════════════════════════\n\n`;
 
   const categoryEmojis: Record<IngredientCategory, string> = {
     fruteria: '🥦 FRUTERÍA Y VERDURAS',
@@ -145,6 +187,6 @@ export function formatShoppingListForShare(items: ShoppingItem[], weekRange: str
     text += `\n`;
   });
 
-  text += `_Generado con el Planificador de Menús Familiar_ ✨`;
+  text += `_Planificador Familiar Residuo Cero & Batch Cooking_ 🥑`;
   return text;
 }

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Recipe } from '@/types';
-import { Clock, Users, Star, Edit, Trash2, ChefHat } from 'lucide-react';
+import { Clock, Users, Star, Edit, Trash2, ChefHat, Briefcase, Baby, RefreshCw } from 'lucide-react';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -76,9 +76,14 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
               {recipe.mealType === 'lunch' ? 'Comida' : recipe.mealType === 'dinner' ? 'Cena' : 'Comida / Cena'}
             </span>
-            {recipe.difficulty && (
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600">
-                {recipe.difficulty}
+            {recipe.isTupperFriendly && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-0.5">
+                <Briefcase className="w-2.5 h-2.5" /> Tupper
+              </span>
+            )}
+            {recipe.batchCooking && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-0.5">
+                <RefreshCw className="w-2.5 h-2.5" /> Cocina x2
               </span>
             )}
           </div>
@@ -122,10 +127,6 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
           <span className="flex items-center gap-1">
             <Users className="w-3.5 h-3.5 text-slate-400" />
             {recipe.servings}p
-          </span>
-          <span className="flex items-center gap-1">
-            <ChefHat className="w-3.5 h-3.5 text-slate-400" />
-            {recipe.ingredients.length} ing.
           </span>
         </div>
 

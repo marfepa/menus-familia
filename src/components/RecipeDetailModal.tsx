@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Recipe, CATEGORY_LABELS } from '@/types';
-import { X, Clock, Users, Star, Edit, ChefHat, CheckSquare } from 'lucide-react';
+import { X, Clock, Users, Star, Edit, ChefHat, Briefcase, Baby, Calendar, RefreshCw } from 'lucide-react';
 
 interface RecipeDetailModalProps {
   recipe: Recipe | null;
@@ -28,26 +28,31 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
         
         {/* Header con imagen/emoji y títulos */}
-        <div className="relative p-5 sm:p-6 bg-gradient-to-r from-emerald-50 to-teal-50/50 border-b border-slate-200 flex items-start justify-between">
+        <div className="relative p-5 sm:p-6 bg-gradient-to-r from-emerald-50 via-teal-50/50 to-amber-50/30 border-b border-slate-200 flex items-start justify-between">
           <div className="flex items-start gap-4">
             <div className="w-14 h-14 rounded-2xl bg-white shadow-md border border-slate-200/80 flex items-center justify-center text-3xl shrink-0">
               {recipe.emoji || '🍲'}
             </div>
             <div>
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
                   {recipe.mealType === 'lunch' ? 'Comida' : recipe.mealType === 'dinner' ? 'Cena' : 'Comida / Cena'}
                 </span>
-                {recipe.difficulty && (
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                    {recipe.difficulty}
+                {recipe.isTupperFriendly && (
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1">
+                    <Briefcase className="w-3 h-3" /> Apto Tupper
+                  </span>
+                )}
+                {recipe.batchCooking && (
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center gap-1">
+                    <RefreshCw className="w-3 h-3" /> Cocina x2
                   </span>
                 )}
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
                 {recipe.name}
               </h2>
               {recipe.description && (
@@ -89,17 +94,19 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Barra de metadatos (Tiempo, Raciones ajustables) */}
+        {/* Barra de metadatos (Tiempo, Raciones ajustables, Conservación) */}
         <div className="px-6 py-3 bg-white border-b border-slate-100 flex items-center justify-between flex-wrap gap-4 text-xs sm:text-sm">
           <div className="flex items-center gap-4 text-slate-600">
             <span className="flex items-center gap-1.5 font-medium">
               <Clock className="w-4 h-4 text-emerald-600" />
               {recipe.prepTimeMinutes} minutos
             </span>
-            <span className="flex items-center gap-1.5 font-medium">
-              <ChefHat className="w-4 h-4 text-emerald-600" />
-              {recipe.ingredients.length} ingredientes
-            </span>
+            {recipe.fridgeLifeDays && (
+              <span className="flex items-center gap-1.5 font-medium text-indigo-700">
+                <Calendar className="w-4 h-4" />
+                Nevera: {recipe.fridgeLifeDays} días
+              </span>
+            )}
           </div>
 
           {/* Ajustador de raciones */}
@@ -124,9 +131,22 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Contenido scrolleable: Ingredientes y Preparación */}
+        {/* Contenido scrolleable: Ficha Niños/BLW, Ingredientes y Preparación */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
           
+          {/* Ficha Especial Niños & BLW */}
+          {recipe.kidsNotes && (
+            <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200/90 text-xs sm:text-sm text-amber-950 space-y-1 shadow-xs">
+              <div className="flex items-center gap-2 font-bold text-amber-900">
+                <Baby className="w-4 h-4 text-amber-600" />
+                <span>Adaptación para Niños Pequeños & BLW (Sólidos)</span>
+              </div>
+              <p className="leading-relaxed pl-6 text-amber-900/90">
+                {recipe.kidsNotes}
+              </p>
+            </div>
+          )}
+
           {/* Tags */}
           {recipe.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
@@ -175,7 +195,7 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
           {recipe.instructions.length > 0 && (
             <div>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <span>👨‍🍳</span> Paso a Paso
+                <span>👨‍🍳</span> Paso a Paso Rápido ($\le 20$ min)
               </h3>
               <ol className="space-y-3">
                 {recipe.instructions.map((step, idx) => (
@@ -195,8 +215,8 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
 
           {/* Notas o consejos */}
           {recipe.notes && (
-            <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-xs sm:text-sm text-amber-900">
-              <span className="font-bold block mb-0.5">💡 Consejo familiar:</span>
+            <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs sm:text-sm text-emerald-950">
+              <span className="font-bold block mb-0.5">💡 Consejo de Cocina / Tupper:</span>
               <span>{recipe.notes}</span>
             </div>
           )}
@@ -207,7 +227,7 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
         <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-semibold transition-colors"
+            className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-semibold transition-colors"
           >
             Cerrar
           </button>

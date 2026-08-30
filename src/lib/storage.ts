@@ -2,10 +2,10 @@ import { Recipe, WeeklyPlan, ShoppingItem } from '@/types';
 import { INITIAL_RECIPES } from '@/data/initialRecipes';
 
 const STORAGE_KEYS = {
-  RECIPES: 'recetario_familia_recipes_v2',
-  PLANS: 'recetario_familia_plans_v2',
-  SHOPPING_LISTS: 'recetario_familia_shopping_v2',
-  CUSTOM_ITEMS: 'recetario_familia_custom_items_v2',
+  RECIPES: 'recetario_familia_recipes_v3',
+  PLANS: 'recetario_familia_plans_v3',
+  SHOPPING_LISTS: 'recetario_familia_shopping_v3',
+  CUSTOM_ITEMS: 'recetario_familia_custom_items_v3',
 };
 
 export const Storage = {
