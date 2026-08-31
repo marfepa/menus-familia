@@ -137,8 +137,15 @@ class SyncManager {
 
       const localUpdatedAt = Storage.getLastLocalUpdate();
 
-      if (!remoteData) {
-        // La base de datos en la nube está vacía: subir estado local inicial
+      const hasRemoteData = Boolean(
+        remoteData &&
+          ((Array.isArray(remoteData.recipes) && remoteData.recipes.length > 0) ||
+            (remoteData.plans && typeof remoteData.plans === 'object' && Object.keys(remoteData.plans).length > 0) ||
+            (Array.isArray(remoteData.pantry) && remoteData.pantry.length > 0))
+      );
+
+      if (!remoteData || !hasRemoteData) {
+        // La base de datos en la nube no tiene datos válidos: subir estado local actual
         const currentPayload = Storage.getFullPayload();
         await this.pushToCloudImmediate(currentPayload);
         this.setStatus('synced');
@@ -148,15 +155,17 @@ class SyncManager {
 
       const remoteUpdatedAt = remoteData.updatedAt || '';
       const isRemoteNewer = !localUpdatedAt || new Date(remoteUpdatedAt) > new Date(localUpdatedAt);
-      const isDifferentDevice = remoteData.deviceId && remoteData.deviceId !== Storage.getDeviceId();
+      const isDifferentDevice = Boolean(remoteData.deviceId && remoteData.deviceId !== Storage.getDeviceId());
 
-      if (force || isRemoteNewer) {
+      // Aplicar solo si viene de otro dispositivo o si se ha forzado manualmente
+      if (force || (isRemoteNewer && isDifferentDevice)) {
         Storage.applyFullPayload(remoteData);
         this.dataListeners.forEach((listener) => listener(remoteData));
         this.setStatus('synced');
         this.isPulling = false;
         return true;
       }
+
 
       this.setStatus('synced');
       this.isPulling = false;

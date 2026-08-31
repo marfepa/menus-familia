@@ -290,12 +290,17 @@ export const Storage = {
   },
 
   applyFullPayload(payload: FamilySyncPayload): void {
-    if (!payload) return;
-    if (Array.isArray(payload.recipes)) {
+    if (!payload || typeof payload !== 'object') return;
+    if (Array.isArray(payload.recipes) && payload.recipes.length > 0) {
       this.saveRecipes(payload.recipes);
     }
     if (payload.plans && typeof payload.plans === 'object') {
-      this.savePlans(payload.plans);
+      const hasRemotePlans = Object.keys(payload.plans).length > 0;
+      const currentPlans = this.getPlans();
+      const hasLocalPlans = Object.keys(currentPlans).length > 0;
+      if (hasRemotePlans || !hasLocalPlans) {
+        this.savePlans(payload.plans);
+      }
     }
     if (payload.shoppingLists && typeof payload.shoppingLists === 'object') {
       this.clearAllShoppingLists();
@@ -304,7 +309,7 @@ export const Storage = {
     if (payload.settings && typeof payload.settings === 'object') {
       this.saveSettings(payload.settings);
     }
-    if (Array.isArray(payload.pantry)) {
+    if (Array.isArray(payload.pantry) && payload.pantry.length > 0) {
       this.savePantry(payload.pantry);
     }
     if (Array.isArray(payload.excludedFoods)) {
@@ -314,6 +319,7 @@ export const Storage = {
       this.setLastLocalUpdate(payload.updatedAt);
     }
   },
+
 
   resetToDefaults(): void {
     if (!canUseStorage()) return;

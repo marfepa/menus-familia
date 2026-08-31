@@ -30,24 +30,54 @@ export async function getCloudFamilyData(): Promise<FamilySyncPayload | null> {
 
   if (isConfigured && url && token) {
     try {
-      const endpoint = `${url.replace(/\/$/, '')}/get/${REDIS_KEY}`;
-      const res = await fetch(endpoint, {
+      const baseUrl = url.replace(/\/$/, '');
+      let rawResult: unknown = null;
+
+      // Intentar primero endpoint estándar GET /get/KEY
+      const res = await fetch(`${baseUrl}/get/${REDIS_KEY}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
         cache: 'no-store',
       });
 
-      if (!res.ok) {
-        console.error('Error HTTP al consultar Upstash/Vercel KV:', res.status, res.statusText);
-        return null;
+      if (res.ok) {
+        const json = (await res.json()) as { result?: unknown };
+        rawResult = json.result;
+      } else {
+        // Fallback endpoint POST ['GET', KEY]
+        const postRes = await fetch(baseUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(['GET', REDIS_KEY]),
+          cache: 'no-store',
+        });
+        if (postRes.ok) {
+          const json = (await postRes.json()) as { result?: unknown };
+          rawResult = json.result;
+        }
       }
 
-      const data = (await res.json()) as { result: string | null };
-      if (!data.result) return null;
+      if (!rawResult) return null;
 
-      const parsed: FamilySyncPayload = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
-      return parsed;
+      let parsed: any = rawResult;
+      // Desenvolver de forma segura en caso de codificación JSON anidada
+      while (typeof parsed === 'string') {
+        try {
+          parsed = JSON.parse(parsed);
+        } catch {
+          break;
+        }
+      }
+
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as FamilySyncPayload;
+      }
+
+      return null;
     } catch (err) {
       console.error('Error al leer de Upstash/Vercel KV:', err);
       return null;
@@ -75,20 +105,34 @@ export async function saveCloudFamilyData(payload: FamilySyncPayload): Promise<b
 
   if (isConfigured && url && token) {
     try {
-      const endpoint = `${url.replace(/\/$/, '')}/set/${REDIS_KEY}`;
-      const stringified = JSON.stringify(payload);
-      const res = await fetch(endpoint, {
+      const baseUrl = url.replace(/\/$/, '');
+      const stringifiedPayload = JSON.stringify(payload);
+
+      // Guardar con comando estándar Upstash POST ['SET', KEY, VALUE]
+      const res = await fetch(baseUrl, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(stringified),
+        body: JSON.stringify(['SET', REDIS_KEY, stringifiedPayload]),
       });
 
       if (!res.ok) {
-        console.error('Error HTTP al guardar en Upstash/Vercel KV:', res.status, res.statusText);
-        return false;
+        // Fallback a endpoint /set/:key
+        const fallbackRes = await fetch(`${baseUrl}/set/${REDIS_KEY}`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: stringifiedPayload,
+        });
+
+        if (!fallbackRes.ok) {
+          console.error('Error HTTP al guardar en Upstash/Vercel KV:', fallbackRes.status, fallbackRes.statusText);
+          return false;
+        }
       }
 
       return true;
@@ -111,6 +155,7 @@ export async function saveCloudFamilyData(payload: FamilySyncPayload): Promise<b
     return false;
   }
 }
+
 
 /**
  * Comprueba el estado del proveedor de almacenamiento.
