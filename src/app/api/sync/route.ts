@@ -6,7 +6,26 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const data = await getCloudFamilyData();
+    const rawData = await getCloudFamilyData();
+    if (!rawData) {
+      return NextResponse.json({
+        success: true,
+        data: null,
+      });
+    }
+
+    const data: FamilySyncPayload = {
+      version: rawData.version || 1,
+      updatedAt: rawData.updatedAt || new Date().toISOString(),
+      deviceId: rawData.deviceId,
+      recipes: Array.isArray(rawData.recipes) ? rawData.recipes : [],
+      plans: rawData.plans && typeof rawData.plans === 'object' ? rawData.plans : {},
+      shoppingLists: rawData.shoppingLists && typeof rawData.shoppingLists === 'object' ? rawData.shoppingLists : {},
+      settings: rawData.settings && typeof rawData.settings === 'object' ? rawData.settings : { householdServings: 4, generateMode: 'full' },
+      pantry: Array.isArray(rawData.pantry) ? rawData.pantry : [],
+      excludedFoods: Array.isArray(rawData.excludedFoods) ? rawData.excludedFoods : [],
+    };
+
     return NextResponse.json({
       success: true,
       data,
@@ -19,6 +38,7 @@ export async function GET() {
     );
   }
 }
+
 
 export async function POST(request: Request) {
   try {

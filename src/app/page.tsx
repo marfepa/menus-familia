@@ -46,7 +46,7 @@ export default function Home() {
   const [excludedFoods, setExcludedFoods] = useState<ExcludedFoodItem[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatusState>('synced');
-
+  const [isMounted, setIsMounted] = useState(false);
 
   const [slotModalInfo, setSlotModalInfo] = useState<{ day: DayOfWeek; type: 'lunch' | 'dinner' } | null>(null);
   const [recipeToView, setRecipeToView] = useState<Recipe | null>(null);
@@ -57,54 +57,43 @@ export default function Home() {
   const [isExcludedModalOpen, setIsExcludedModalOpen] = useState(false);
 
   const loadData = useCallback(() => {
-    const loadedRecipes = Storage.getRecipes();
-    setRecipes(loadedRecipes);
-    const loadedSettings = Storage.getSettings();
-    setSettings(loadedSettings);
-    const loadedPantry = Storage.getPantry();
-    setPantry(loadedPantry);
-    const loadedExcluded = Storage.getExcludedFoods();
-    setExcludedFoods(loadedExcluded);
+    try {
+      const loadedRecipes = Storage.getRecipes() || [];
+      setRecipes(loadedRecipes);
+      const loadedSettings = Storage.getSettings();
+      setSettings(loadedSettings);
+      const loadedPantry = Storage.getPantry() || [];
+      setPantry(loadedPantry);
+      const loadedExcluded = Storage.getExcludedFoods() || [];
+      setExcludedFoods(loadedExcluded);
 
-    const loadedPlan = Storage.getPlanForWeek(currentWeekStartDate);
-    setWeeklyPlan(loadedPlan);
-    setWarnings(analyzePlanWarnings(loadedPlan, loadedRecipes, loadedExcluded));
+      const loadedPlan = Storage.getPlanForWeek(currentWeekStartDate);
+      setWeeklyPlan(loadedPlan);
+      setWarnings(analyzePlanWarnings(loadedPlan, loadedRecipes, loadedExcluded));
 
-    const savedList = Storage.getShoppingList(currentWeekStartDate);
-    if (savedList) {
-      setShoppingItems(savedList);
-    } else {
-      const generated = generateShoppingListFromPlan(loadedPlan, loadedRecipes, {
-        householdServings: loadedSettings.householdServings,
-        pantry: loadedPantry,
-      });
-      setShoppingItems(generated);
-      Storage.saveShoppingList(currentWeekStartDate, generated);
+      const savedList = Storage.getShoppingList(currentWeekStartDate);
+      if (savedList && Array.isArray(savedList)) {
+        setShoppingItems(savedList);
+      } else {
+        const generated = generateShoppingListFromPlan(loadedPlan, loadedRecipes, {
+          householdServings: loadedSettings.householdServings,
+          pantry: loadedPantry,
+        });
+        setShoppingItems(generated);
+        Storage.saveShoppingList(currentWeekStartDate, generated);
+      }
+    } catch (e) {
+      console.error('Error al cargar datos locales:', e);
     }
   }, [currentWeekStartDate]);
 
   useEffect(() => {
+    setIsMounted(true);
     loadData();
     syncManager.init();
 
-    const unsubData = syncManager.subscribeData((payload) => {
-      setRecipes(payload.recipes);
-      setSettings(payload.settings);
-      setPantry(payload.pantry);
-      setExcludedFoods(payload.excludedFoods);
-      const plan = payload.plans[currentWeekStartDate] || Storage.getPlanForWeek(currentWeekStartDate);
-      setWeeklyPlan(plan);
-      setWarnings(analyzePlanWarnings(plan, payload.recipes, payload.excludedFoods));
-      const list = payload.shoppingLists[currentWeekStartDate] || Storage.getShoppingList(currentWeekStartDate);
-      if (list) {
-        setShoppingItems(list);
-      } else {
-        const generated = generateShoppingListFromPlan(plan, payload.recipes, {
-          householdServings: payload.settings.householdServings,
-          pantry: payload.pantry,
-        });
-        setShoppingItems(generated);
-      }
+    const unsubData = syncManager.subscribeData(() => {
+      loadData();
     });
 
     const unsubStatus = syncManager.subscribeStatus((st) => {
@@ -116,7 +105,8 @@ export default function Home() {
       unsubStatus();
       syncManager.destroy();
     };
-  }, [loadData, currentWeekStartDate]);
+  }, [loadData]);
+
 
   const persistPlan = (
     nextPlan: WeeklyPlan,
@@ -419,24 +409,34 @@ export default function Home() {
     }).length;
   }, [pantry]);
 
-  if (!weeklyPlan) return null;
+  if (!isMounted || !weeklyPlan) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="text-4xl animate-bounce">🥑</div>
+          <p className="text-sm font-semibold text-slate-500">Cargando menús de casa...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        shoppingItemsCount={shoppingItems.filter((i) => !i.checked).length}
-        pantryItemsCount={pantry.filter((i) => i.inStock).length}
+        shoppingItemsCount={(shoppingItems || []).filter((i) => !i.checked).length}
+        pantryItemsCount={(pantry || []).filter((i) => i.inStock).length}
         expiringPantryCount={expiringPantryCount}
-        recipesCount={recipes.length}
-        excludedFoodsCount={excludedFoods.length}
+        recipesCount={(recipes || []).length}
+        excludedFoodsCount={(excludedFoods || []).length}
         syncStatus={syncStatus}
         onTriggerSync={() => syncManager.pullFromCloud(true)}
         onOpenDeployModal={() => setIsDeployModalOpen(true)}
         onOpenBackupModal={() => setIsBackupModalOpen(true)}
         onOpenExcludedFoodsModal={() => setIsExcludedModalOpen(true)}
       />
+
 
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6">
