@@ -29,6 +29,7 @@ export const RecipeModal: React.FC<RecipeModalProps> = ({
   const [selectedTag, setSelectedTag] = useState<string>('todos');
   const [customText, setCustomText] = useState('');
   const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const [onlyAirFryer, setOnlyAirFryer] = useState(false);
 
   // Extraer todos los tags únicos disponibles
   const allTags = useMemo(() => {
@@ -46,15 +47,16 @@ export const RecipeModal: React.FC<RecipeModalProps> = ({
 
       const matchTag = selectedTag === 'todos' || r.tags.includes(selectedTag);
       const matchFav = !onlyFavorites || r.favorite;
+      const matchAirFryer = !onlyAirFryer || r.isAirFryerFriendly || r.tags.some(t => /air-?fryer/i.test(t));
 
       // Filtrar según si encaja con Comida o Cena
       const matchMealType = currentSlotInfo
         ? r.mealType === 'both' || r.mealType === currentSlotInfo.type
         : true;
 
-      return matchSearch && matchTag && matchFav && matchMealType;
+      return matchSearch && matchTag && matchFav && matchAirFryer && matchMealType;
     });
-  }, [recipes, search, selectedTag, onlyFavorites, currentSlotInfo]);
+  }, [recipes, search, selectedTag, onlyFavorites, onlyAirFryer, currentSlotInfo]);
 
   if (!isOpen || !currentSlotInfo) return null;
 
@@ -130,6 +132,17 @@ export const RecipeModal: React.FC<RecipeModalProps> = ({
               <Star className="w-3 h-3 fill-current" />
               Favoritos
             </button>
+            <button
+              onClick={() => setOnlyAirFryer(!onlyAirFryer)}
+              className={`px-2.5 py-1 rounded-lg font-medium whitespace-nowrap flex items-center gap-1 transition-colors ${
+                onlyAirFryer
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100'
+              }`}
+            >
+              <span>♨️</span>
+              Air-Fryer
+            </button>
 
             {allTags.map(tag => (
               <button
@@ -182,6 +195,14 @@ export const RecipeModal: React.FC<RecipeModalProps> = ({
                       </span>
                       <span>•</span>
                       <span>{recipe.ingredients.length} ingredientes</span>
+                      {(recipe.isAirFryerFriendly || recipe.tags.some(t => /air-?fryer/i.test(t))) && (
+                        <>
+                          <span>•</span>
+                          <span className="font-bold text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200 text-[10px]">
+                            ♨️ Air-Fryer{recipe.airFryerConfig?.timeMinutes ? ` ${recipe.airFryerConfig.timeMinutes}'` : ''}
+                          </span>
+                        </>
+                      )}
                       {recipe.tags.length > 0 && (
                         <>
                           <span>•</span>

@@ -28,6 +28,7 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
   const [selectedTag, setSelectedTag] = useState<string>('todos');
   const [mealTypeFilter, setMealTypeFilter] = useState<'all' | 'lunch' | 'dinner'>('all');
   const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const [onlyAirFryer, setOnlyAirFryer] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'time' | 'rating'>('name');
 
   // Extraer tags únicos
@@ -49,17 +50,18 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
 
         const matchTag = selectedTag === 'todos' || r.tags.includes(selectedTag);
         const matchFav = !onlyFavorites || r.favorite;
+        const matchAirFryer = !onlyAirFryer || r.isAirFryerFriendly || r.tags.some(t => /air-?fryer/i.test(t));
         const matchMealType =
           mealTypeFilter === 'all' || r.mealType === 'both' || r.mealType === mealTypeFilter;
 
-        return matchSearch && matchTag && matchFav && matchMealType;
+        return matchSearch && matchTag && matchFav && matchAirFryer && matchMealType;
       })
       .sort((a, b) => {
         if (sortBy === 'time') return a.prepTimeMinutes - b.prepTimeMinutes;
         if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
         return a.name.localeCompare(b.name, 'es');
       });
-  }, [recipes, search, selectedTag, mealTypeFilter, onlyFavorites, sortBy]);
+  }, [recipes, search, selectedTag, mealTypeFilter, onlyFavorites, onlyAirFryer, sortBy]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
@@ -165,6 +167,18 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
           >
             <Star className="w-3.5 h-3.5 fill-current" />
             Favoritos familiares
+          </button>
+
+          <button
+            onClick={() => setOnlyAirFryer(!onlyAirFryer)}
+            className={`px-3 py-1 rounded-lg font-semibold whitespace-nowrap flex items-center gap-1.5 transition-colors shrink-0 ${
+              onlyAirFryer
+                ? 'bg-orange-600 text-white shadow-xs'
+                : 'bg-orange-50 text-orange-800 border border-orange-200 hover:bg-orange-100'
+            }`}
+          >
+            <span>♨️</span>
+            Air-Fryer
           </button>
 
           <button

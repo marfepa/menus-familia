@@ -51,6 +51,11 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
                     <RefreshCw className="w-3 h-3" /> Cocina x2
                   </span>
                 )}
+                {(recipe.isAirFryerFriendly || recipe.tags.some(t => /air-?fryer/i.test(t))) && (
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200 flex items-center gap-1">
+                    <span>♨️</span> Air-Fryer {recipe.airFryerConfig?.timeMinutes ? `(${recipe.airFryerConfig.timeMinutes} min)` : ''}
+                  </span>
+                )}
               </div>
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
                 {recipe.name}
@@ -144,6 +149,36 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
               <p className="leading-relaxed pl-6 text-amber-900/90">
                 {recipe.kidsNotes}
               </p>
+            </div>
+          )}
+
+          {/* Ficha Parámetros Air-Fryer */}
+          {(recipe.isAirFryerFriendly || recipe.tags.some(t => /air-?fryer/i.test(t))) && (
+            <div className="p-4 rounded-2xl bg-orange-50/90 border border-orange-200 text-xs sm:text-sm text-orange-950 space-y-2 shadow-xs">
+              <div className="flex items-center gap-2 font-bold text-orange-900">
+                <span className="text-base">♨️</span>
+                <span>Parámetros Recomendados para Freidora de Aire (Air-Fryer)</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 text-xs">
+                {recipe.airFryerConfig?.temperatureDegrees && (
+                  <div className="bg-white/80 p-2.5 rounded-xl border border-orange-200/70">
+                    <span className="text-orange-700 block font-semibold text-[11px]">Temperatura</span>
+                    <span className="text-sm font-extrabold text-orange-950">{recipe.airFryerConfig.temperatureDegrees}°C</span>
+                  </div>
+                )}
+                {recipe.airFryerConfig?.timeMinutes && (
+                  <div className="bg-white/80 p-2.5 rounded-xl border border-orange-200/70">
+                    <span className="text-orange-700 block font-semibold text-[11px]">Tiempo en cubeta</span>
+                    <span className="text-sm font-extrabold text-orange-950">{recipe.airFryerConfig.timeMinutes} minutos</span>
+                  </div>
+                )}
+                <div className="bg-white/80 p-2.5 rounded-xl border border-orange-200/70 col-span-2 sm:col-span-1">
+                  <span className="text-orange-700 block font-semibold text-[11px]">Manipulación</span>
+                  <span className="text-xs font-bold text-orange-950">
+                    {recipe.airFryerConfig?.shakeHalfway ? 'Agitar cesta a mitad' : 'Cocinado continuo directo'}
+                  </span>
+                </div>
+              </div>
             </div>
           )}
 

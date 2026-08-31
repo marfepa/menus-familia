@@ -35,6 +35,8 @@ interface WeekPlannerProps {
   householdServings: number;
   onHouseholdServingsChange: (servings: number) => void;
   warnings: string[];
+  prioritizeAirFryerDinners?: boolean;
+  onToggleAirFryerDinners?: (val: boolean) => void;
 }
 
 export const WeekPlanner: React.FC<WeekPlannerProps> = ({
@@ -54,6 +56,8 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
   householdServings,
   onHouseholdServingsChange,
   warnings,
+  prioritizeAirFryerDinners,
+  onToggleAirFryerDinners,
 }) => {
   const currentMondayToday = getMonday(new Date());
   const isCurrentWeek = currentWeekStartDate === currentMondayToday;
@@ -161,6 +165,21 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
             <option value="dinners">Solo cenas</option>
             <option value="tuppers">Solo tuppers L–V</option>
           </select>
+
+          {/* Toggle Air-Fryer en Cenas */}
+          <button
+            type="button"
+            onClick={() => onToggleAirFryerDinners?.(!prioritizeAirFryerDinners)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all border ${
+              prioritizeAirFryerDinners
+                ? 'bg-orange-50 text-orange-700 border-orange-300 shadow-xs'
+                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+            }`}
+            title="Priorizar recetas rápidas de Air-Fryer en las cenas de la semana"
+          >
+            <span>♨️</span>
+            <span className="hidden sm:inline">Cenas Air-Fryer</span>
+          </button>
 
           <button
             onClick={onCopyPreviousWeek}

@@ -212,5 +212,34 @@ describe('menuGenerator', () => {
     assert.equal(dinnerIds.includes('plato-salmon'), false);
     assert.ok(dinnerIds.includes('cena-pescado'));
   });
+
+  it('detecta recetas de Air-Fryer y las prioriza en cenas cuando la opción está activa', () => {
+    const airfryerChicken = recipe({
+      id: 'af-chicken',
+      name: 'Pollo crujiente AirFryer',
+      mealType: 'dinner',
+      isAirFryerFriendly: true,
+      airFryerConfig: { temperatureDegrees: 190, timeMinutes: 14, shakeHalfway: true },
+      prepTimeMinutes: 15,
+      tags: ['SinGluten', 'Pollo', 'AirFryer'],
+    });
+
+    const skilletFish = recipe({
+      id: 'skillet-fish',
+      name: 'Pescado a la sartén',
+      mealType: 'dinner',
+      prepTimeMinutes: 20,
+      tags: ['SinGluten', 'Pescado'],
+    });
+
+    const { plan } = generateSmartWeeklyPlanWithMeta(
+      '2026-08-31',
+      [airfryerChicken, skilletFish],
+      { mode: 'dinners', prioritizeAirFryerDinners: true, rng: () => 0.0 }
+    );
+
+    const mondayDinner = plan.days.lunes.dinner?.recipeId;
+    assert.equal(mondayDinner, 'af-chicken');
+  });
 });
 

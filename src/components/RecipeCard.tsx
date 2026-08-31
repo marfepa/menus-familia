@@ -86,6 +86,11 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
                 <RefreshCw className="w-2.5 h-2.5" /> Cocina x2
               </span>
             )}
+            {(recipe.isAirFryerFriendly || recipe.tags.some(t => /air-?fryer/i.test(t))) && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-orange-50 text-orange-700 border border-orange-200 flex items-center gap-0.5">
+                <span>♨️</span> Air-Fryer{recipe.airFryerConfig?.timeMinutes ? ` ${recipe.airFryerConfig.timeMinutes}'` : ''}
+              </span>
+            )}
           </div>
 
           <h3 className="font-bold text-base text-slate-900 group-hover:text-emerald-700 transition-colors line-clamp-1">

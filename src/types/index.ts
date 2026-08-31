@@ -43,6 +43,12 @@ export interface Recipe {
   isTupperFriendly?: boolean; // Apto para llevar en tupper al trabajo y recalentar
   batchCooking?: boolean; // Se puede cocinar cantidad doble para comer varios días
   fridgeLifeDays?: number; // Días que aguanta en nevera (ej. 3 días)
+  isAirFryerFriendly?: boolean; // Apto / optimizado para freidora de aire (Air-Fryer)
+  airFryerConfig?: {
+    temperatureDegrees?: number; // ej. 180, 200
+    timeMinutes?: number; // ej. 12, 15
+    shakeHalfway?: boolean; // Agitar cesta a mitad de cocinado
+  };
 }
 
 export type MealSlotKind = 'recipe' | 'custom' | 'out' | 'leftover';
@@ -136,6 +142,7 @@ export interface AppSettings {
   householdServings: number;
   generateMode: GenerateMode;
   excludedFoods?: ExcludedFoodItem[];
+  prioritizeAirFryerDinners?: boolean;
 }
 
 export const PACKAGE_FORMAT_CONFIG: Record<

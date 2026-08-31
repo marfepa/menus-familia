@@ -8,6 +8,7 @@ export interface GenerationOptions {
   balancedProteins?: boolean;
   glutenLight?: boolean;
   kidsFriendlyDinners?: boolean;
+  prioritizeAirFryerDinners?: boolean;
   mode?: GenerateMode;
   excludedFoods?: ExcludedFoodItem[];
   rng?: () => number;
@@ -48,6 +49,13 @@ export function isKidsFriendlyDinner(recipe: Recipe): boolean {
     recipe.tags.includes('Niños') ||
     recipe.tags.includes('Rápido (<20min)') ||
     recipe.tags.includes('Ligero')
+  );
+}
+
+export function isAirFryerRecipe(recipe: Recipe): boolean {
+  return (
+    Boolean(recipe.isAirFryerFriendly) ||
+    recipe.tags.some((t) => /air-?fryer/i.test(t))
   );
 }
 
@@ -161,6 +169,7 @@ export function generateSmartWeeklyPlanWithMeta(
     balancedProteins: options.balancedProteins ?? true,
     glutenLight: options.glutenLight ?? true,
     kidsFriendlyDinners: options.kidsFriendlyDinners ?? true,
+    prioritizeAirFryerDinners: options.prioritizeAirFryerDinners ?? false,
     mode: options.mode ?? 'full',
     excludedFoods: options.excludedFoods ?? [],
     rng: options.rng ?? Math.random,
@@ -245,6 +254,7 @@ export function generateSmartWeeklyPlanWithMeta(
       if (!ctx.isDinner && r.isTupperFriendly) weight += 3;
       if (r.batchCooking) weight += 3;
       if (ctx.isDinner && r.kidsNotes) weight += 2;
+      if (ctx.isDinner && opts.prioritizeAirFryerDinners && isAirFryerRecipe(r)) weight += 4;
       if (r.rating >= 4) weight += r.rating - 3;
       for (let i = 0; i < weight; i++) weighted.push(r);
     });

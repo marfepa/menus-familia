@@ -28,6 +28,16 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [instructions, setInstructions] = useState<string[]>(['']);
   const [notes, setNotes] = useState('');
+  
+  // Campos de optimización familiar & Air-Fryer
+  const [kidsNotes, setKidsNotes] = useState('');
+  const [isTupperFriendly, setIsTupperFriendly] = useState(false);
+  const [batchCooking, setBatchCooking] = useState(false);
+  const [fridgeLifeDays, setFridgeLifeDays] = useState<number | undefined>(2);
+  const [isAirFryerFriendly, setIsAirFryerFriendly] = useState(false);
+  const [airFryerTemperature, setAirFryerTemperature] = useState(190);
+  const [airFryerTime, setAirFryerTime] = useState(14);
+  const [airFryerShake, setAirFryerShake] = useState(true);
 
   // Rellenar datos si estamos editando
   useEffect(() => {
@@ -43,6 +53,14 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
       setIngredients(recipeToEdit.ingredients || []);
       setInstructions(recipeToEdit.instructions?.length ? recipeToEdit.instructions : ['']);
       setNotes(recipeToEdit.notes || '');
+      setKidsNotes(recipeToEdit.kidsNotes || '');
+      setIsTupperFriendly(Boolean(recipeToEdit.isTupperFriendly));
+      setBatchCooking(Boolean(recipeToEdit.batchCooking));
+      setFridgeLifeDays(recipeToEdit.fridgeLifeDays ?? 2);
+      setIsAirFryerFriendly(Boolean(recipeToEdit.isAirFryerFriendly || recipeToEdit.tags?.some(t => /air-?fryer/i.test(t))));
+      setAirFryerTemperature(recipeToEdit.airFryerConfig?.temperatureDegrees || 190);
+      setAirFryerTime(recipeToEdit.airFryerConfig?.timeMinutes || recipeToEdit.prepTimeMinutes || 14);
+      setAirFryerShake(recipeToEdit.airFryerConfig?.shakeHalfway ?? true);
     } else {
       // Nueva receta con defaults limpios
       setName('');
@@ -58,6 +76,14 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
       ]);
       setInstructions(['']);
       setNotes('');
+      setKidsNotes('');
+      setIsTupperFriendly(false);
+      setBatchCooking(false);
+      setFridgeLifeDays(2);
+      setIsAirFryerFriendly(false);
+      setAirFryerTemperature(190);
+      setAirFryerTime(14);
+      setAirFryerShake(true);
     }
   }, [recipeToEdit, isOpen]);
 
@@ -103,6 +129,10 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
       .map(t => t.trim())
       .filter(t => t.length > 0);
 
+    if (isAirFryerFriendly && !tags.some(t => /air-?fryer/i.test(t))) {
+      tags.push('AirFryer');
+    }
+
     const validIngredients = ingredients.filter(i => i.name.trim().length > 0);
     const validInstructions = instructions.filter(i => i.trim().length > 0);
 
@@ -121,6 +151,18 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
       rating: recipeToEdit?.rating || 5,
       favorite: recipeToEdit?.favorite !== undefined ? recipeToEdit.favorite : true,
       notes: notes.trim(),
+      kidsNotes: kidsNotes.trim() || undefined,
+      isTupperFriendly,
+      batchCooking,
+      fridgeLifeDays: Number(fridgeLifeDays) || 2,
+      isAirFryerFriendly,
+      airFryerConfig: isAirFryerFriendly
+        ? {
+            temperatureDegrees: Number(airFryerTemperature) || 190,
+            timeMinutes: Number(airFryerTime) || Number(prepTimeMinutes) || 14,
+            shakeHalfway: airFryerShake,
+          }
+        : undefined,
     };
 
     onSave(recipeData);
@@ -276,6 +318,99 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({
                 onChange={(e) => setTagsInput(e.target.value)}
                 className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
               />
+            </div>
+
+            {/* Optimización Familiar & Air-Fryer */}
+            <div className="bg-gradient-to-r from-orange-50/70 via-amber-50/40 to-slate-50 p-3.5 rounded-2xl border border-orange-200/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-orange-950">
+                  <input
+                    type="checkbox"
+                    checked={isAirFryerFriendly}
+                    onChange={(e) => setIsAirFryerFriendly(e.target.checked)}
+                    className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 rounded-md border-orange-300"
+                  />
+                  <span className="flex items-center gap-1">
+                    <span>♨️</span>
+                    <span>Receta apta / optimizada para Air-Fryer (Freidora de aire)</span>
+                  </span>
+                </label>
+              </div>
+
+              {isAirFryerFriendly && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-xs">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-orange-900 mb-1">Temperatura (°C)</label>
+                    <input
+                      type="number"
+                      min="100"
+                      max="240"
+                      step="5"
+                      value={airFryerTemperature}
+                      onChange={(e) => setAirFryerTemperature(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-orange-200 rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-orange-900 mb-1">Tiempo (min)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="60"
+                      value={airFryerTime}
+                      onChange={(e) => setAirFryerTime(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-orange-200 rounded-lg"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 pt-4">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-semibold text-orange-900">
+                      <input
+                        type="checkbox"
+                        checked={airFryerShake}
+                        onChange={(e) => setAirFryerShake(e.target.checked)}
+                        className="w-3.5 h-3.5 rounded text-orange-600 focus:ring-orange-500 rounded-md border-orange-300"
+                      />
+                      <span>Agitar cesta a mitad</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Adaptación Niños y BLW */}
+              <div className="pt-2 border-t border-orange-200/60">
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  👶 Adaptación para Niños Pequeños & BLW (Sólidos)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Desmigar el pescado sin espinas, cortar patata en bastones blandos"
+                  value={kidsNotes}
+                  onChange={(e) => setKidsNotes(e.target.value)}
+                  className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                />
+              </div>
+
+              {/* Toggles Tupper y Cocina x2 */}
+              <div className="flex items-center gap-4 pt-1 flex-wrap text-xs">
+                <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 font-medium">
+                  <input
+                    type="checkbox"
+                    checked={isTupperFriendly}
+                    onChange={(e) => setIsTupperFriendly(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded text-emerald-600 focus:ring-emerald-500 rounded-md border-slate-300"
+                  />
+                  <span>💼 Apto Tupper</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 font-medium">
+                  <input
+                    type="checkbox"
+                    checked={batchCooking}
+                    onChange={(e) => setBatchCooking(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 rounded-md border-slate-300"
+                  />
+                  <span>🔄 Cocina x2 (Batch Cooking)</span>
+                </label>
+              </div>
             </div>
           </div>
 

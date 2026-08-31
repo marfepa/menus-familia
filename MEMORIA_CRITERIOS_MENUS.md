@@ -95,3 +95,10 @@ Este documento sirve como **registro vivo y manual operativo** para diseñar los
   - **Raciones de casa** (3/4/5…) escalan la lista de compra. Las sobras no duplican ingredientes.
   - Filtros duros del generador: cenas ≤ 25 min y amables para niños; gluten-light si hay alternativa; modos semana completa / solo cenas / solo tuppers L–V.
   - Huecos `receta` / `texto` / `fuera` / `sobras`. “Fuera” no compra. Copiar semana anterior. Backup JSON incluye listas, despensa y raciones. PWA instalable.
+
+- **31/08/2026 (integración Air-Fryer para cenas infantiles y familiares)**:
+  - **Soporte nativo Air-Fryer**: Campos `isAirFryerFriendly` y `airFryerConfig` (temperatura en °C, tiempo en minutos y aviso de agitar cesta).
+  - **Generador con preferencia inteligente**: Opción activable `Cenas Air-Fryer` que pondera positivamente las recetas en freidora de aire en las cenas de lunes a jueves sin romper la rotación de proteínas ni el pilar gluten-light.
+  - **Filtros rápidos & Badges visuales**: Botón directo `[♨️ Air-Fryer]` en el recetario y en el selector de platos de la semana, badges en tarjetas y fichas con parámetros exactos de temperatura y tiempo.
+  - **5 nuevas recetas familiares/BLW en Air-Fryer**: Salmón crujiente con calabacín (12 min), bastoncitos de pollo crujiente al limón sin gluten (14 min), hamburguesitas caseras con dados de boniato (14 min), lomos de merluza dorada con brócoli tostado (10 min) y fajitas de pollo en tiras a la cesta (15 min).
+

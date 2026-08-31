@@ -165,7 +165,11 @@ export default function Home() {
     const { plan, warnings: nextWarnings } = generateSmartWeeklyPlanWithMeta(
       currentWeekStartDate,
       recipes,
-      { mode: settings.generateMode, excludedFoods }
+      {
+        mode: settings.generateMode,
+        excludedFoods,
+        prioritizeAirFryerDinners: settings.prioritizeAirFryerDinners ?? false,
+      }
     );
     setWarnings(nextWarnings);
     persistPlan(plan, recipes, settings, pantry, excludedFoods);
@@ -187,6 +191,12 @@ export default function Home() {
 
   const handleGenerateModeChange = (mode: GenerateMode) => {
     const next = { ...settings, generateMode: mode };
+    setSettings(next);
+    Storage.saveSettings(next);
+  };
+
+  const handleToggleAirFryerDinners = (val: boolean) => {
+    const next = { ...settings, prioritizeAirFryerDinners: val };
     setSettings(next);
     Storage.saveSettings(next);
   };
@@ -396,6 +406,8 @@ export default function Home() {
             householdServings={settings.householdServings}
             onHouseholdServingsChange={handleHouseholdServingsChange}
             warnings={warnings}
+            prioritizeAirFryerDinners={settings.prioritizeAirFryerDinners}
+            onToggleAirFryerDinners={handleToggleAirFryerDinners}
           />
         )}
 
