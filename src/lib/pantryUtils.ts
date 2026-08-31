@@ -171,3 +171,21 @@ export function matchesExcludedFood(textToSearch: string, excludedFoods: Exclude
     });
   });
 }
+
+export function getPantryZoneForItem(item: Partial<DynamicPantryItem>): import('@/types').PantryZone {
+  if (item.category === 'congelados') return 'congelador';
+  if (item.category === 'fruteria') return 'frescos';
+  if (item.category === 'panaderia') return 'panera';
+  if (item.category === 'carniceria' || item.category === 'pescaderia' || item.category === 'lacteos') return 'nevera';
+  if (item.category === 'despensa') return 'despensa_seca';
+
+  const norm = normalizeText(item.name || '');
+  if (/congelad|helad|hielo/i.test(norm)) return 'congelador';
+  if (/pan|molde|tostad|avena|cereal|fajita|tortilla/i.test(norm)) return 'panera';
+  if (/pollo|carne|ternera|cerdo|salmon|merluza|pescado|gamba|marisco|yogur|queso|leche|huevo|embutido|jamon/i.test(norm)) return 'nevera';
+  if (/tomate|calabacin|pimiento|cebolla|patata|platano|manzana|naranja|limon|lechuga|espinaca|fruta|verdura/i.test(norm)) return 'frescos';
+
+  return 'despensa_seca';
+}
+
+

@@ -7,6 +7,7 @@ import {
   extractMatchKeywords,
   createPantryItemFromShopping,
   matchesExcludedFood,
+  getPantryZoneForItem,
 } from '@/lib/pantryUtils';
 
 describe('pantryUtils', () => {
@@ -101,4 +102,15 @@ describe('pantryUtils', () => {
     assert.ok(matchesExcludedFood('Tacos con cilantro picado', excluded));
     assert.equal(matchesExcludedFood('Pollo al ajillo con patatas', excluded), undefined);
   });
+
+  it('clasifica los alimentos en las zonas físicas de cocina correctas', () => {
+    assert.equal(getPantryZoneForItem({ name: 'Lomos de salmón', category: 'pescaderia' }), 'nevera');
+    assert.equal(getPantryZoneForItem({ name: 'Pechuga de pollo', category: 'carniceria' }), 'nevera');
+    assert.equal(getPantryZoneForItem({ name: 'Huevos camperos', category: 'lacteos' }), 'nevera');
+    assert.equal(getPantryZoneForItem({ name: 'Calabacines', category: 'fruteria' }), 'frescos');
+    assert.equal(getPantryZoneForItem({ name: 'Garbanzos cocidos', category: 'despensa' }), 'despensa_seca');
+    assert.equal(getPantryZoneForItem({ name: 'Pan de molde integral', category: 'panaderia' }), 'panera');
+    assert.equal(getPantryZoneForItem({ name: 'Verduras para saltear', category: 'congelados' }), 'congelador');
+  });
 });
+

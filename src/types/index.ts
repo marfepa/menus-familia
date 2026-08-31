@@ -165,6 +165,114 @@ export const CATEGORY_LABELS: Record<IngredientCategory, { name: string; emoji: 
   otros: { name: 'Otros y Limpieza/Hogar', emoji: '🛒', color: 'purple', aisleTip: 'Pasillo droguería y hogar' },
 };
 
+export type PantryZone = 'nevera' | 'frescos' | 'despensa_seca' | 'panera' | 'congelador';
+
+export interface PantryZoneConfig {
+  id: PantryZone;
+  name: string;
+  subtitle: string;
+  emoji: string;
+  temperatureTip: string;
+  color: string;
+  bgGradient: string;
+  borderClass: string;
+  categories: IngredientCategory[];
+  quickPresets: Array<{ name: string; category: IngredientCategory; shelfLifeDays: number; defaultFormat?: string }>;
+}
+
+export const PANTRY_ZONES_CONFIG: Record<PantryZone, PantryZoneConfig> = {
+  nevera: {
+    id: 'nevera',
+    name: 'Nevera / Refrigerador',
+    subtitle: 'Carnes, pescados frescos, lácteos, huevos y refrigerados',
+    emoji: '🧊',
+    temperatureTip: 'Zona fría (2°C – 4°C)',
+    color: 'cyan',
+    bgGradient: 'from-cyan-950/50 via-slate-900 to-sky-950/40',
+    borderClass: 'border-cyan-500/30',
+    categories: ['carniceria', 'pescaderia', 'lacteos'],
+    quickPresets: [
+      { name: 'Pechuga de pollo', category: 'carniceria', shelfLifeDays: 4, defaultFormat: '500g (Bandeja)' },
+      { name: 'Salmón fresco', category: 'pescaderia', shelfLifeDays: 3, defaultFormat: '2 lomos (Bandeja)' },
+      { name: 'Huevos camperos', category: 'lacteos', shelfLifeDays: 28, defaultFormat: '1 docena' },
+      { name: 'Queso rallado / lonchas', category: 'lacteos', shelfLifeDays: 18, defaultFormat: '200g' },
+      { name: 'Yogures naturales', category: 'lacteos', shelfLifeDays: 14, defaultFormat: 'Pack 4 uds' },
+    ],
+  },
+  frescos: {
+    id: 'frescos',
+    name: 'Cajón de Frescos & Verdulería',
+    subtitle: 'Verduras, frutas, hortalizas y hierbas frescas',
+    emoji: '🥬',
+    temperatureTip: 'Cajón de alta humedad (6°C – 8°C)',
+    color: 'emerald',
+    bgGradient: 'from-emerald-950/50 via-slate-900 to-teal-950/40',
+    borderClass: 'border-emerald-500/30',
+    categories: ['fruteria'],
+    quickPresets: [
+      { name: 'Calabacines verdes', category: 'fruteria', shelfLifeDays: 6, defaultFormat: '2-3 piezas' },
+      { name: 'Plátanos de Canarias', category: 'fruteria', shelfLifeDays: 5, defaultFormat: '1 kg' },
+      { name: 'Tomates ensalada', category: 'fruteria', shelfLifeDays: 6, defaultFormat: '500g' },
+      { name: 'Zanahorias', category: 'fruteria', shelfLifeDays: 14, defaultFormat: '1 bolsa (1kg)' },
+      { name: 'Espinacas frescas', category: 'fruteria', shelfLifeDays: 4, defaultFormat: 'Bolsa 300g' },
+      { name: 'Patatas y Cebollas', category: 'fruteria', shelfLifeDays: 21, defaultFormat: 'Malla 2kg' },
+    ],
+  },
+  despensa_seca: {
+    id: 'despensa_seca',
+    name: 'Despensa Seca & Armarios',
+    subtitle: 'Legumbres, arroz, pastas, conservas, aceites y especias',
+    emoji: '🥫',
+    temperatureTip: 'Lugar fresco y seco (15°C – 20°C)',
+    color: 'amber',
+    bgGradient: 'from-amber-950/50 via-slate-900 to-orange-950/40',
+    borderClass: 'border-amber-500/30',
+    categories: ['despensa', 'otros'],
+    quickPresets: [
+      { name: 'Garbanzos cocidos', category: 'despensa', shelfLifeDays: 180, defaultFormat: 'Bote 400g' },
+      { name: 'Lentejas cocidas', category: 'despensa', shelfLifeDays: 180, defaultFormat: 'Bote 400g' },
+      { name: 'Arroz redondo', category: 'despensa', shelfLifeDays: 180, defaultFormat: 'Paquete 1kg' },
+      { name: 'Pasta integral', category: 'despensa', shelfLifeDays: 180, defaultFormat: 'Paquete 500g' },
+      { name: 'Aceite de Oliva Virgen Extra (AOVE)', category: 'despensa', shelfLifeDays: 365, defaultFormat: 'Botella 1L' },
+      { name: 'Tomate triturado / frito', category: 'despensa', shelfLifeDays: 90, defaultFormat: 'Bote 400g' },
+      { name: 'Atún en lata (AOVE)', category: 'despensa', shelfLifeDays: 365, defaultFormat: 'Pack 3 latas' },
+    ],
+  },
+  panera: {
+    id: 'panera',
+    name: 'Panera & Desayunos',
+    subtitle: 'Panes de molde, barras, tortillas de trigo, avena y cereales',
+    emoji: '🍞',
+    temperatureTip: 'Lugar aireado y protegido',
+    color: 'yellow',
+    bgGradient: 'from-yellow-950/50 via-slate-900 to-amber-950/40',
+    borderClass: 'border-yellow-500/30',
+    categories: ['panaderia'],
+    quickPresets: [
+      { name: 'Pan de molde 100% integral', category: 'panaderia', shelfLifeDays: 7, defaultFormat: 'Paquete' },
+      { name: 'Tortillas de trigo / fajitas', category: 'panaderia', shelfLifeDays: 10, defaultFormat: 'Pack 6-8 uds' },
+      { name: 'Copos de avena integral', category: 'panaderia', shelfLifeDays: 90, defaultFormat: 'Bolsa 500g' },
+      { name: 'Barra de pan rústico', category: 'panaderia', shelfLifeDays: 2, defaultFormat: '1 barra' },
+    ],
+  },
+  congelador: {
+    id: 'congelador',
+    name: 'Congelador',
+    subtitle: 'Pescados ultracongelados, verduras para saltear y platos congelados',
+    emoji: '❄️',
+    temperatureTip: 'Ultracongelación (-18°C)',
+    color: 'blue',
+    bgGradient: 'from-blue-950/50 via-slate-900 to-indigo-950/40',
+    borderClass: 'border-blue-500/30',
+    categories: ['congelados'],
+    quickPresets: [
+      { name: 'Verduras salteadas congeladas', category: 'congelados', shelfLifeDays: 180, defaultFormat: 'Bolsa 750g' },
+      { name: 'Lomos de merluza congelados', category: 'congelados', shelfLifeDays: 180, defaultFormat: 'Bolsa 500g' },
+      { name: 'Guisantes congelados', category: 'congelados', shelfLifeDays: 180, defaultFormat: 'Bolsa 500g' },
+    ],
+  },
+};
+
 export const DAYS_CONFIG: Array<{ id: DayOfWeek; label: string; short: string }> = [
   { id: 'lunes', label: 'Lunes', short: 'Lun' },
   { id: 'martes', label: 'Martes', short: 'Mar' },
@@ -174,3 +282,4 @@ export const DAYS_CONFIG: Array<{ id: DayOfWeek; label: string; short: string }>
   { id: 'sabado', label: 'Sábado', short: 'Sáb' },
   { id: 'domingo', label: 'Domingo', short: 'Dom' },
 ];
+
