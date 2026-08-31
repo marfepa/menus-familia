@@ -198,6 +198,8 @@ export default function Home() {
         prioritizeAirFryerDinners: settings.prioritizeAirFryerDinners ?? false,
         prioritizeMeatOverFish: settings.prioritizeMeatOverFish ?? true,
         maxFishMealsPerWeek: settings.maxFishMealsPerWeek ?? 2,
+        maxPastaMealsPerWeek: settings.maxPastaMealsPerWeek ?? 3,
+        pantry,
       }
     );
     setWarnings(nextWarnings);

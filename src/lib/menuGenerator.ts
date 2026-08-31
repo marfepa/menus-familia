@@ -1,6 +1,7 @@
-import type { Recipe, WeeklyPlan, GenerateMode, MealSlotData, ExcludedFoodItem } from '@/types';
+import type { Recipe, WeeklyPlan, GenerateMode, MealSlotData, ExcludedFoodItem, DynamicPantryItem } from '@/types';
 import { PLAN_DAYS, emptyWeeklyPlan, getSlotKind } from '@/lib/planUtils';
-import { matchesExcludedFood } from '@/lib/pantryUtils';
+import { matchesExcludedFood, calculateShelfLifeInfo } from '@/lib/pantryUtils';
+import { normalizeText } from '@/lib/shoppingListGenerator';
 
 export interface GenerationOptions {
   prioritizeFavorites?: boolean;
@@ -11,8 +12,10 @@ export interface GenerationOptions {
   prioritizeAirFryerDinners?: boolean;
   prioritizeMeatOverFish?: boolean;
   maxFishMealsPerWeek?: number;
+  maxPastaMealsPerWeek?: number;
   mode?: GenerateMode;
   excludedFoods?: ExcludedFoodItem[];
+  pantry?: DynamicPantryItem[];
   rng?: () => number;
 }
 
@@ -23,6 +26,9 @@ export interface GeneratedPlanResult {
 
 const GLUTEN_NAME_RE =
   /pasta\b|trigo|cuscus|couscous|espagueti|macarron|sémola|semola|pan rallado|harina de trigo|lasana|lasaña|fideos de trigo/i;
+
+const PASTA_RE =
+  /pasta\b|macarron|espagueti|espiral|tallarin|pluma|fusilli|penne|lazos|fideos/i;
 
 const PROTEIN_GROUPS: Array<{ id: string; tags: string[] }> = [
   { id: 'pescado', tags: ['Pescado'] },
@@ -48,6 +54,14 @@ export function isMeatRecipe(recipe: Recipe): boolean {
   );
 }
 
+export function isPastaRecipe(recipe: Recipe): boolean {
+  return (
+    recipe.tags.includes('Pasta') ||
+    PASTA_RE.test(recipe.name) ||
+    recipe.ingredients.some((i) => PASTA_RE.test(i.name))
+  );
+}
+
 const PREFERRED_FISH_RE = /merluza|dorada|salm[oó]n|lubina|bonito|at[uú]n/i;
 
 export function isPreferredFish(recipe: Recipe): boolean {
@@ -62,6 +76,53 @@ export function recipeIsGlutenLight(recipe: Recipe): boolean {
   if (recipe.tags.includes('SinGluten')) return true;
   const blob = `${recipe.name} ${recipe.ingredients.map((i) => i.name).join(' ')}`;
   return !GLUTEN_NAME_RE.test(blob);
+}
+
+export interface RecipePantryScore {
+  matchedIngredientsCount: number;
+  expiringBonus: number;
+  totalBonus: number;
+}
+
+export function calculateRecipePantryScore(
+  recipe: Recipe,
+  pantry: DynamicPantryItem[] = [],
+  referenceDateStr?: string
+): RecipePantryScore {
+  if (!pantry || pantry.length === 0 || !recipe.ingredients || recipe.ingredients.length === 0) {
+    return { matchedIngredientsCount: 0, expiringBonus: 0, totalBonus: 0 };
+  }
+
+  let matchedIngredientsCount = 0;
+  let expiringBonus = 0;
+
+  for (const ing of recipe.ingredients) {
+    const ingNorm = normalizeText(ing.name);
+    const matchingPantryItem = pantry.find((pItem) => {
+      if (!pItem.inStock) return false;
+      const keywords = pItem.matchKeywords && pItem.matchKeywords.length > 0 ? pItem.matchKeywords : [pItem.name];
+      return keywords.some((kw) => {
+        const kwNorm = normalizeText(kw);
+        if (kwNorm.length <= 3) {
+          return new RegExp(`(^|[^a-z0-9])${kwNorm}([^a-z0-9]|$)`).test(ingNorm);
+        }
+        return ingNorm.includes(kwNorm);
+      });
+    });
+
+    if (matchingPantryItem) {
+      matchedIngredientsCount += 1;
+      const shelfInfo = calculateShelfLifeInfo(matchingPantryItem, referenceDateStr);
+      if (shelfInfo.status === 'critical') {
+        expiringBonus += 6; // Muy urgente de consumir
+      } else if (shelfInfo.status === 'medium') {
+        expiringBonus += 3; // Próximo a caducar
+      }
+    }
+  }
+
+  const totalBonus = matchedIngredientsCount * 2 + expiringBonus;
+  return { matchedIngredientsCount, expiringBonus, totalBonus };
 }
 
 export function leftoverSlotCount(recipe: Recipe): number {
@@ -115,7 +176,8 @@ export function analyzePlanWarnings(
   const warnings: string[] = [];
   let leftoverCount = 0;
   let slowDinners = 0;
-  let glutenMeals = 0;
+  let pastaMeals = 0;
+  let nonPastaGlutenMeals = 0;
   let dinnersWithoutKids = 0;
   let dinnerCount = 0;
   const excludedViolations: string[] = [];
@@ -139,8 +201,13 @@ export function analyzePlanWarnings(
     ].forEach(({ slot, mealLabel }) => {
       if (getSlotKind(slot) !== 'recipe' || !slot?.recipeId) return;
       const rec = recipeMap.get(slot.recipeId);
-      if (rec && !recipeIsGlutenLight(rec)) glutenMeals += 1;
-      if (rec && excludedFoods.length > 0) {
+      if (!rec) return;
+      if (isPastaRecipe(rec)) {
+        pastaMeals += 1;
+      } else if (!recipeIsGlutenLight(rec)) {
+        nonPastaGlutenMeals += 1;
+      }
+      if (excludedFoods.length > 0) {
         const match = recipeContainsExcludedFood(rec, excludedFoods);
         if (match) {
           excludedViolations.push(`${rec.name} (${day}, ${mealLabel} contiene '${match.name}')`);
@@ -163,8 +230,11 @@ export function analyzePlanWarnings(
   if (slowDinners > 0) {
     warnings.push(`${slowDinners} cena${slowDinners > 1 ? 's' : ''} supera(n) 25 min de preparación.`);
   }
-  if (glutenMeals > 0) {
-    warnings.push(`${glutenMeals} plato${glutenMeals > 1 ? 's' : ''} no es gluten-light.`);
+  if (pastaMeals > 3) {
+    warnings.push(`${pastaMeals} platos de pasta superan la recomendación de máx. 3 raciones semanales.`);
+  }
+  if (nonPastaGlutenMeals > 0) {
+    warnings.push(`${nonPastaGlutenMeals} plato${nonPastaGlutenMeals > 1 ? 's' : ''} no es gluten-light.`);
   }
   if (dinnerCount > 0 && dinnersWithoutKids > 0) {
     warnings.push(`${dinnersWithoutKids} cena${dinnersWithoutKids > 1 ? 's' : ''} poco amable(s) para los niños.`);
@@ -192,7 +262,10 @@ export function generateSmartWeeklyPlanWithMeta(
   recipes: Recipe[],
   options: GenerationOptions = {}
 ): GeneratedPlanResult {
-  const opts: Required<Omit<GenerationOptions, 'rng'>> & { rng: () => number } = {
+  const opts: Required<Omit<GenerationOptions, 'rng' | 'pantry'>> & {
+    pantry?: DynamicPantryItem[];
+    rng: () => number;
+  } = {
     prioritizeFavorites: options.prioritizeFavorites ?? true,
     quickDinners: options.quickDinners ?? true,
     balancedProteins: options.balancedProteins ?? true,
@@ -201,8 +274,10 @@ export function generateSmartWeeklyPlanWithMeta(
     prioritizeAirFryerDinners: options.prioritizeAirFryerDinners ?? false,
     prioritizeMeatOverFish: options.prioritizeMeatOverFish ?? true,
     maxFishMealsPerWeek: options.maxFishMealsPerWeek ?? 2,
+    maxPastaMealsPerWeek: options.maxPastaMealsPerWeek ?? 3,
     mode: options.mode ?? 'full',
     excludedFoods: options.excludedFoods ?? [],
+    pantry: options.pantry ?? [],
     rng: options.rng ?? Math.random,
   };
 
@@ -226,6 +301,7 @@ export function generateSmartWeeklyPlanWithMeta(
   const usedRecipeIds = new Set<string>();
   const lastCookedDay = new Map<string, number>();
   let fishCookedCount = 0;
+  let pastaCookedCount = 0;
 
   const getSlot = (dayIdx: number, meal: 'lunch' | 'dinner'): MealSlotData | undefined =>
     plan.days[PLAN_DAYS[dayIdx]][meal];
@@ -263,7 +339,20 @@ export function generateSmartWeeklyPlanWithMeta(
       if (next.length > 0) available = next;
     };
 
-    if (opts.glutenLight) apply(recipeIsGlutenLight);
+    if (opts.glutenLight) {
+      apply((r) => recipeIsGlutenLight(r) || (isPastaRecipe(r) && pastaCookedCount < opts.maxPastaMealsPerWeek));
+    }
+    if (pastaCookedCount >= opts.maxPastaMealsPerWeek) {
+      const nonPasta = available.filter((r) => !isPastaRecipe(r));
+      if (nonPasta.length > 0) {
+        available = nonPasta;
+      } else {
+        const poolNonPasta = pool.filter((r) => !isPastaRecipe(r));
+        if (poolNonPasta.length > 0) {
+          available = poolNonPasta;
+        }
+      }
+    }
     if (ctx.requireTupper) apply((r) => Boolean(r.isTupperFriendly));
     if (ctx.isDinner && opts.quickDinners) {
       apply((r) => r.prepTimeMinutes <= 25 || r.tags.includes('Ligero'));
@@ -286,7 +375,14 @@ export function generateSmartWeeklyPlanWithMeta(
 
     if (opts.prioritizeMeatOverFish && fishCookedCount >= opts.maxFishMealsPerWeek) {
       const nonFish = available.filter((r) => !isFishRecipe(r));
-      if (nonFish.length > 0) available = nonFish;
+      if (nonFish.length > 0) {
+        available = nonFish;
+      } else {
+        const poolNonFish = pool.filter((r) => !isFishRecipe(r));
+        if (poolNonFish.length > 0) {
+          available = poolNonFish;
+        }
+      }
     }
 
     const unused = available.filter((r) => !usedRecipeIds.has(r.id));
@@ -305,6 +401,13 @@ export function generateSmartWeeklyPlanWithMeta(
       if (opts.prioritizeMeatOverFish) {
         if (isMeatRecipe(r)) weight += 5;
         if (isFishRecipe(r) && isPreferredFish(r)) weight += 1;
+      }
+      if (isPastaRecipe(r) && ctx.dayIndex <= 4 && pastaCookedCount < opts.maxPastaMealsPerWeek) {
+        weight += 3; // Impulso para pasta entre semana (L-V)
+      }
+      if (opts.pantry && opts.pantry.length > 0) {
+        const pantryScore = calculateRecipePantryScore(r, opts.pantry, weekStartDate);
+        weight += pantryScore.totalBonus;
       }
       if (r.rating >= 4) weight += r.rating - 3;
       for (let i = 0; i < weight; i++) weighted.push(r);
@@ -375,6 +478,9 @@ export function generateSmartWeeklyPlanWithMeta(
     lastCookedDay.set(recipe.id, dayIdx);
     if (isFishRecipe(recipe)) {
       fishCookedCount += 1;
+    }
+    if (isPastaRecipe(recipe)) {
+      pastaCookedCount += 1;
     }
     placeLeftovers(dayIdx, meal, recipe);
   }

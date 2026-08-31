@@ -828,6 +828,23 @@ const SUPERMARKET_RULES: SupermarketProductRule[] = [
     },
   },
   {
+    id: 'pasta_paquete',
+    matchKeywords: ['macarrones', 'plumas', 'espirales', 'fusilli', 'espaguetis', 'tallarines', 'lazos', 'pasta corta', 'pasta'],
+    commercialName: 'Pasta de trigo (macarrones / espirales / espaguetis)',
+    category: 'despensa',
+    packageFormat: 'bolsa',
+    supermarketTip: 'Pasillo pastas: Paquete 500g',
+    computeFormat: (qty, _unit, recipeCount) => {
+      const packs = Math.ceil(qty / 500) || 1;
+      return {
+        commercialFormat: `${packs} Paquete${packs > 1 ? 's' : ''} (500g)`,
+        recipeUsageNote: `Recetas usan: ${Math.round(qty)}g (${recipeCount} ${recipeCount === 1 ? 'receta' : 'recetas'}) · Fondo despensa`,
+        suggestedPacks: packs,
+        commercialUnit: 'Paquete (500g)',
+      };
+    },
+  },
+  {
     id: 'tomate_triturado_frito',
     matchKeywords: ['tomate triturado', 'tomate frito'],
     commercialName: 'Tomate triturado natural',

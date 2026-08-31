@@ -16,9 +16,11 @@ Este documento sirve como **registro vivo y manual operativo** para diseñar los
 
 ---
 
-### 2. 🌾 Mínimo / Libre de Gluten (*Gluten-Light*)
-- **Objetivo**: Digestiones ligeras, menor inflamación y evitar ultraprocesados de trigo.
+### 2. 🌾 Gluten Moderado / Controlado & Pasta hasta 3 días/semana (L-V)
+- **Objetivo**: Digestiones ligeras sin restricción total a cero: cantidad de gluten semanal baja/moderada, evitando ultraprocesados y bollería pesada de trigo pero permitiendo pasta de calidad en raciones controladas.
+- **Pauta de pasta**: Hasta un máximo de 3 comidas/cenas de pasta por semana, concentradas preferentemente de lunes a viernes (almuerzos de tupper para la oficina y cenas familiares rápidas).
 - **Fuentes de carbohidratos prioritarias**:
+  - **Pasta de trigo limpia ($\le 3$ días/semana)**: Macarrones, espirales, lazos o tallarines combinados siempre con verduras trituradas/fáciles y proteínas magras (boloñesa casera, pollo al limón, atún/huevo, gambas).
   - **Patata y boniato / batata**: Asadas en dados, al vapor en microondas (6 min) o en puré casero.
   - **Arroz**: Arroz jazmín, basmati o bomba.
   - **Quinoa y maíz**: Ensaladas templadas, tortillas 100% de maíz para fajitas/tacos.
@@ -108,5 +110,15 @@ Este documento sirve como **registro vivo y manual operativo** para diseñar los
 - **31/08/2026 (fajitas/tacos de carne y priorización de proteína cárnica)**:
   - **Nuevas recetas de ternera**: *Fajitas de Ternera en Tiras con Pimientos Salteados y Guacamole Casero* (`rec-28`, 18 min) y *Tacos Caseros de Ternera Picada Suave con Aguacate y Queso Fundido* (`rec-29`, 15 min, sartén/Air-Fryer), ambas 100% en tortillas de maíz sin gluten.
   - **Generador con preferencia de carne sobre pescado**: Mayor ponderación para recetas de carnicería/aves y acotación inteligente de raciones de pescado a un máximo de 2 por semana (priorizando salmón, merluza y dorada).
+
+- **31/08/2026 (conexión de despensa al generador y pasta moderada hasta 3 días/semana)**:
+  - **Generador inteligente con despensa viva**: El algoritmo de menú ahora analiza `pantry` (`DynamicPantryItem[]`) y calcula `calculateRecipePantryScore` dando bonificación a recetas con ingredientes en stock y máxima prioridad a alimentos frescos/próximos a caducar para residuo cero.
+  - **Regla de pasta moderada (máx. 3 raciones/semana)**: Flexibilización de la cota de gluten a un consumo moderado y sano. Soporte de `maxPastaMealsPerWeek: 3` en el generador con preferencia de asignación en comidas de lunes a viernes.
+  - **4 nuevas recetas familiares de pasta equilibrada**:
+    - *Macarrones con Boloñesa Casera de Ternera y Verduras Trituradas* (`rec-30`, 20 min, batch cooking).
+    - *Espirales de Pasta con Tiras de Pollo al Limón, Calabacín y Queso Feta* (`rec-31`, 15 min, tupper friendly).
+    - *Ensalada Templada de Pasta con Atún Claro, Huevo Duro, Aguacate y Cherries* (`rec-32`, 12 min).
+    - *Tallarines Salteados con Gambas al Ajillo y Pimiento en Tiras* (`rec-33`, 15 min).
+  - **Estandarización de compra**: Formato lineal de supermercado de 500g para pastas y fondo de despensa.
 
 

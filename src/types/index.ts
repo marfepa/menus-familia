@@ -145,6 +145,7 @@ export interface AppSettings {
   prioritizeAirFryerDinners?: boolean;
   prioritizeMeatOverFish?: boolean;
   maxFishMealsPerWeek?: number;
+  maxPastaMealsPerWeek?: number;
 }
 
 export const PACKAGE_FORMAT_CONFIG: Record<

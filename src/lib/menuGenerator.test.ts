@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import type { Recipe } from '@/types';
+import type { Recipe, DynamicPantryItem } from '@/types';
 import {
   generateSmartWeeklyPlanWithMeta,
   leftoverSlotCount,
@@ -8,6 +8,8 @@ import {
   isKidsFriendlyDinner,
   isFishRecipe,
   isMeatRecipe,
+  isPastaRecipe,
+  calculateRecipePantryScore,
 } from '@/lib/menuGenerator';
 import { INITIAL_RECIPES } from '@/data/initialRecipes';
 import { getSlotKind, PLAN_DAYS } from '@/lib/planUtils';
@@ -153,16 +155,22 @@ describe('menuGenerator', () => {
     }
   });
 
-  it('prioriza cenas rápidas y evita pasta de trigo si hay alternativa', () => {
+  it('prioriza cenas rápidas frente a platos lentos', () => {
+    const quickMeat = recipe({
+      id: 'carne-rapida',
+      name: 'Pollo rápido',
+      mealType: 'dinner',
+      prepTimeMinutes: 15,
+      tags: ['SinGluten', 'Carne'],
+    });
     const { plan } = generateSmartWeeklyPlanWithMeta(
       '2026-08-31',
-      [glutenPasta, quickFish, slowDinner],
+      [quickMeat, quickFish, slowDinner],
       { mode: 'dinners', rng }
     );
     const dinnerIds = Object.values(plan.days)
       .map((d) => d.dinner?.recipeId)
       .filter(Boolean);
-    assert.equal(dinnerIds.every((id) => id !== 'pasta-trigo'), true);
     assert.equal(dinnerIds.every((id) => id !== 'lenta'), true);
   });
 
@@ -292,6 +300,110 @@ describe('menuGenerator', () => {
     assert.equal(recipeIsGlutenLight(tacos!), true);
     assert.equal(isKidsFriendlyDinner(fajitas!), true);
     assert.equal(isKidsFriendlyDinner(tacos!), true);
+  });
+
+  it('calcula puntuación de despensa y bonifica productos disponibles o próximos a caducar', () => {
+    const chickenDish = recipe({
+      id: 'd-chicken',
+      name: 'Pollo salteado',
+      ingredients: [
+        { id: 'i-pol', name: 'Pechuga de pollo en dados', quantity: 500, unit: 'g', category: 'carniceria' },
+        { id: 'i-cal', name: 'Calabacín verde', quantity: 1, unit: 'uds', category: 'fruteria' },
+      ],
+    });
+
+    const pantry: DynamicPantryItem[] = [
+      {
+        id: 'p-1',
+        name: 'Pechuga de pollo',
+        category: 'carniceria',
+        inStock: true,
+        addedDate: '2026-08-30',
+        shelfLifeDays: 3, // Próximo a caducar
+        matchKeywords: ['pechuga de pollo', 'pollo en dados'],
+      },
+      {
+        id: 'p-2',
+        name: 'Calabacín',
+        category: 'fruteria',
+        inStock: true,
+        shelfLifeDays: 10,
+        matchKeywords: ['calabacin'],
+      },
+    ];
+
+    const score = calculateRecipePantryScore(chickenDish, pantry, '2026-08-31');
+    assert.equal(score.matchedIngredientsCount, 2);
+    assert.ok(score.totalBonus > 4); // Matched base bonus + expiring bonus
+
+    const beefDish = recipe({
+      id: 'd-beef',
+      name: 'Ternera asada',
+      ingredients: [
+        { id: 'i-ter', name: 'Filetes de ternera', quantity: 500, unit: 'g', category: 'carniceria' },
+      ],
+    });
+
+    const { plan } = generateSmartWeeklyPlanWithMeta(
+      '2026-08-31',
+      [chickenDish, beefDish],
+      { mode: 'dinners', pantry, rng: () => 0.0 }
+    );
+    assert.equal(plan.days.lunes.dinner?.recipeId, 'd-chicken');
+  });
+
+  it('permite pasta y limita a máximo 3 raciones de pasta por semana', () => {
+    const pasta1 = recipe({ id: 'p1', name: 'Macarrones boloñesa', mealType: 'both', tags: ['Pasta', 'Carne', 'AptoTupper'] });
+    const pasta2 = recipe({ id: 'p2', name: 'Espirales con pollo', mealType: 'both', tags: ['Pasta', 'Pollo', 'AptoTupper'] });
+    const pasta3 = recipe({ id: 'p3', name: 'Ensalada de pasta', mealType: 'both', tags: ['Pasta', 'Pescado', 'AptoTupper'] });
+    const pasta4 = recipe({ id: 'p4', name: 'Tallarines con gambas', mealType: 'both', tags: ['Pasta', 'Pescado', 'AptoTupper'] });
+    const rice1 = recipe({ id: 'r1', name: 'Arroz con pollo', mealType: 'both', tags: ['SinGluten', 'Carne', 'AptoTupper'] });
+    const potato1 = recipe({ id: 'pot1', name: 'Patatas con ternera', mealType: 'both', tags: ['SinGluten', 'Carne', 'AptoTupper'] });
+
+    const pool = [pasta1, pasta2, pasta3, pasta4, rice1, potato1];
+    const { plan, warnings } = generateSmartWeeklyPlanWithMeta('2026-08-31', pool, {
+      mode: 'full',
+      maxPastaMealsPerWeek: 3,
+      rng,
+    });
+
+    const cookedPastaIds = new Set<string>();
+    PLAN_DAYS.forEach((day) => {
+      ['lunch', 'dinner'].forEach((meal) => {
+        const slot = plan.days[day][meal as 'lunch' | 'dinner'];
+        if (getSlotKind(slot) === 'recipe' && slot?.recipeId) {
+          const rec = pool.find((r) => r.id === slot.recipeId);
+          if (rec && isPastaRecipe(rec)) {
+            cookedPastaIds.add(rec.id);
+          }
+        }
+      });
+    });
+
+    assert.ok(cookedPastaIds.size <= 3, `Se esperaban <= 3 platos de pasta cocinados, pero se encontraron ${cookedPastaIds.size}`);
+    assert.equal(warnings.some((w) => w.includes('superan la recomendación de máx. 3')), false);
+  });
+
+  it('incluye las nuevas recetas de pasta familiar en INITIAL_RECIPES (rec-30 a rec-33)', () => {
+    const rec30 = INITIAL_RECIPES.find((r) => r.id === 'rec-30');
+    const rec31 = INITIAL_RECIPES.find((r) => r.id === 'rec-31');
+    const rec32 = INITIAL_RECIPES.find((r) => r.id === 'rec-32');
+    const rec33 = INITIAL_RECIPES.find((r) => r.id === 'rec-33');
+
+    assert.ok(rec30, 'rec-30 Macarrones con boloñesa debe existir');
+    assert.ok(rec31, 'rec-31 Espirales con pollo debe existir');
+    assert.ok(rec32, 'rec-32 Ensalada de pasta debe existir');
+    assert.ok(rec33, 'rec-33 Tallarines con gambas debe existir');
+
+    assert.equal(isPastaRecipe(rec30!), true);
+    assert.equal(isPastaRecipe(rec31!), true);
+    assert.equal(isPastaRecipe(rec32!), true);
+    assert.equal(isPastaRecipe(rec33!), true);
+
+    assert.equal(isMeatRecipe(rec30!), true);
+    assert.equal(isMeatRecipe(rec31!), true);
+    assert.equal(isFishRecipe(rec32!), true);
+    assert.equal(isFishRecipe(rec33!), true);
   });
 });
 

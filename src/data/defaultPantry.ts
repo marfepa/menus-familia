@@ -6,6 +6,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   excludedFoods: [],
   prioritizeMeatOverFish: true,
   maxFishMealsPerWeek: 2,
+  maxPastaMealsPerWeek: 3,
 };
 
 /** Fondo de despensa: lo marcado se resta de la lista de compra. */
@@ -80,6 +81,15 @@ export const DEFAULT_PANTRY: DynamicPantryItem[] = [
     category: 'despensa',
     shelfLifeDays: 180,
     matchKeywords: ['arroz basmati', 'arroz jazmin', 'arroz blanco', 'arroz cocido', 'quinoa'],
+    source: 'staple',
+  },
+  {
+    id: 'pasta',
+    name: 'Pasta (macarrones, espirales, espaguetis)',
+    inStock: false,
+    category: 'despensa',
+    shelfLifeDays: 180,
+    matchKeywords: ['macarrones', 'plumas', 'espirales', 'fusilli', 'espaguetis', 'tallarines', 'lazos', 'pasta'],
     source: 'staple',
   },
   {
