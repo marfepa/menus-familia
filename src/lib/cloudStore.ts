@@ -6,10 +6,21 @@ const REDIS_KEY = 'family_menu_state_v1';
 const LOCAL_DATA_FILE = path.join(process.cwd(), 'data', 'family_data.json');
 
 function getUpstashCredentials() {
-  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url =
+    process.env.KV_REST_API_URL ||
+    process.env.UPSTASH_REDIS_REST_URL ||
+    process.env.REDIS_REST_API_URL ||
+    process.env.UPSTASH_REDIS_REST_KV_URL ||
+    process.env.UPSTASH_REST_API_URL;
+  const token =
+    process.env.KV_REST_API_TOKEN ||
+    process.env.UPSTASH_REDIS_REST_TOKEN ||
+    process.env.REDIS_REST_API_TOKEN ||
+    process.env.UPSTASH_REDIS_REST_KV_TOKEN ||
+    process.env.UPSTASH_REST_API_TOKEN;
   return { url, token, isConfigured: Boolean(url && token) };
 }
+
 
 /**
  * Lee el estado familiar desde la nube (Upstash/Vercel KV) o desde el archivo local en desarrollo.
