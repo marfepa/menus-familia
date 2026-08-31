@@ -143,6 +143,8 @@ export interface AppSettings {
   generateMode: GenerateMode;
   excludedFoods?: ExcludedFoodItem[];
   prioritizeAirFryerDinners?: boolean;
+  prioritizeMeatOverFish?: boolean;
+  maxFishMealsPerWeek?: number;
 }
 
 export const PACKAGE_FORMAT_CONFIG: Record<

@@ -6,7 +6,10 @@ import {
   leftoverSlotCount,
   recipeIsGlutenLight,
   isKidsFriendlyDinner,
+  isFishRecipe,
+  isMeatRecipe,
 } from '@/lib/menuGenerator';
+import { INITIAL_RECIPES } from '@/data/initialRecipes';
 import { getSlotKind, PLAN_DAYS } from '@/lib/planUtils';
 import { generateShoppingListFromPlan } from '@/lib/shoppingListGenerator';
 
@@ -241,5 +244,55 @@ describe('menuGenerator', () => {
     const mondayDinner = plan.days.lunes.dinner?.recipeId;
     assert.equal(mondayDinner, 'af-chicken');
   });
+
+  it('limita el número de raciones de pescado a máximo 2 por semana cuando hay suficientes recetas de carne', () => {
+    const meat1 = recipe({ id: 'm1', name: 'Pollo 1', mealType: 'both', tags: ['SinGluten', 'Carne', 'AptoTupper'] });
+    const meat2 = recipe({ id: 'm2', name: 'Ternera 2', mealType: 'both', tags: ['SinGluten', 'Carne', 'AptoTupper'] });
+    const meat3 = recipe({ id: 'm3', name: 'Pavo 3', mealType: 'both', tags: ['SinGluten', 'Carne', 'AptoTupper'] });
+    const meat4 = recipe({ id: 'm4', name: 'Hamburguesa 4', mealType: 'both', tags: ['SinGluten', 'Carne', 'AptoTupper'] });
+    const fish1 = recipe({ id: 'f1', name: 'Merluza al horno', mealType: 'both', tags: ['SinGluten', 'Pescado', 'AptoTupper'] });
+    const fish2 = recipe({ id: 'f2', name: 'Salmón a la plancha', mealType: 'both', tags: ['SinGluten', 'Pescado', 'AptoTupper'] });
+    const fish3 = recipe({ id: 'f3', name: 'Dorada con patatas', mealType: 'both', tags: ['SinGluten', 'Pescado', 'AptoTupper'] });
+    const fish4 = recipe({ id: 'f4', name: 'Atún fresco', mealType: 'both', tags: ['SinGluten', 'Pescado', 'AptoTupper'] });
+
+    const pool = [meat1, meat2, meat3, meat4, fish1, fish2, fish3, fish4];
+    const { plan } = generateSmartWeeklyPlanWithMeta('2026-08-31', pool, {
+      mode: 'full',
+      prioritizeMeatOverFish: true,
+      maxFishMealsPerWeek: 2,
+      rng,
+    });
+
+    const cookedFishIds = new Set<string>();
+    PLAN_DAYS.forEach((day) => {
+      ['lunch', 'dinner'].forEach((meal) => {
+        const slot = plan.days[day][meal as 'lunch' | 'dinner'];
+        if (getSlotKind(slot) === 'recipe' && slot?.recipeId) {
+          const rec = pool.find((r) => r.id === slot.recipeId);
+          if (rec && isFishRecipe(rec)) {
+            cookedFishIds.add(rec.id);
+          }
+        }
+      });
+    });
+
+    assert.ok(cookedFishIds.size <= 2, `Se esperaban <= 2 platos de pescado, pero se cocinaron ${cookedFishIds.size}`);
+  });
+
+  it('incluye las nuevas recetas de fajitas y tacos de ternera en INITIAL_RECIPES', () => {
+    const fajitas = INITIAL_RECIPES.find((r) => r.id === 'rec-28');
+    const tacos = INITIAL_RECIPES.find((r) => r.id === 'rec-29');
+
+    assert.ok(fajitas, 'Fajitas de ternera rec-28 debe existir');
+    assert.ok(tacos, 'Tacos de ternera rec-29 debe existir');
+
+    assert.equal(isMeatRecipe(fajitas!), true);
+    assert.equal(isMeatRecipe(tacos!), true);
+    assert.equal(recipeIsGlutenLight(fajitas!), true);
+    assert.equal(recipeIsGlutenLight(tacos!), true);
+    assert.equal(isKidsFriendlyDinner(fajitas!), true);
+    assert.equal(isKidsFriendlyDinner(tacos!), true);
+  });
 });
+
 

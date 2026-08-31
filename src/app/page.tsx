@@ -169,6 +169,8 @@ export default function Home() {
         mode: settings.generateMode,
         excludedFoods,
         prioritizeAirFryerDinners: settings.prioritizeAirFryerDinners ?? false,
+        prioritizeMeatOverFish: settings.prioritizeMeatOverFish ?? true,
+        maxFishMealsPerWeek: settings.maxFishMealsPerWeek ?? 2,
       }
     );
     setWarnings(nextWarnings);

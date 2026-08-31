@@ -4,6 +4,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   householdServings: 4,
   generateMode: 'full',
   excludedFoods: [],
+  prioritizeMeatOverFish: true,
+  maxFishMealsPerWeek: 2,
 };
 
 /** Fondo de despensa: lo marcado se resta de la lista de compra. */

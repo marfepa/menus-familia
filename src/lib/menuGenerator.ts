@@ -9,6 +9,8 @@ export interface GenerationOptions {
   glutenLight?: boolean;
   kidsFriendlyDinners?: boolean;
   prioritizeAirFryerDinners?: boolean;
+  prioritizeMeatOverFish?: boolean;
+  maxFishMealsPerWeek?: number;
   mode?: GenerateMode;
   excludedFoods?: ExcludedFoodItem[];
   rng?: () => number;
@@ -28,6 +30,33 @@ const PROTEIN_GROUPS: Array<{ id: string; tags: string[] }> = [
   { id: 'legumbres', tags: ['Legumbres'] },
   { id: 'pasta', tags: ['Pasta'] },
 ];
+
+export function isFishRecipe(recipe: Recipe): boolean {
+  return (
+    recipe.tags.includes('Pescado') ||
+    recipe.ingredients.some((i) => i.category === 'pescaderia') ||
+    /pescado|merluza|salm[oó]n|dorada|lubina|at[uú]n|bonito|bacalao|gambas|langostinos/i.test(recipe.name)
+  );
+}
+
+export function isMeatRecipe(recipe: Recipe): boolean {
+  return (
+    recipe.tags.includes('Carne') ||
+    recipe.tags.includes('Pollo') ||
+    recipe.ingredients.some((i) => i.category === 'carniceria') ||
+    /carne|ternera|pollo|pavo|cerdo|lomo|hamburguesa|alb[oó]ndiga|jam[oó]n/i.test(recipe.name)
+  );
+}
+
+const PREFERRED_FISH_RE = /merluza|dorada|salm[oó]n|lubina|bonito|at[uú]n/i;
+
+export function isPreferredFish(recipe: Recipe): boolean {
+  if (!isFishRecipe(recipe)) return false;
+  return (
+    PREFERRED_FISH_RE.test(recipe.name) ||
+    recipe.ingredients.some((i) => PREFERRED_FISH_RE.test(i.name))
+  );
+}
 
 export function recipeIsGlutenLight(recipe: Recipe): boolean {
   if (recipe.tags.includes('SinGluten')) return true;
@@ -170,6 +199,8 @@ export function generateSmartWeeklyPlanWithMeta(
     glutenLight: options.glutenLight ?? true,
     kidsFriendlyDinners: options.kidsFriendlyDinners ?? true,
     prioritizeAirFryerDinners: options.prioritizeAirFryerDinners ?? false,
+    prioritizeMeatOverFish: options.prioritizeMeatOverFish ?? true,
+    maxFishMealsPerWeek: options.maxFishMealsPerWeek ?? 2,
     mode: options.mode ?? 'full',
     excludedFoods: options.excludedFoods ?? [],
     rng: options.rng ?? Math.random,
@@ -194,6 +225,7 @@ export function generateSmartWeeklyPlanWithMeta(
 
   const usedRecipeIds = new Set<string>();
   const lastCookedDay = new Map<string, number>();
+  let fishCookedCount = 0;
 
   const getSlot = (dayIdx: number, meal: 'lunch' | 'dinner'): MealSlotData | undefined =>
     plan.days[PLAN_DAYS[dayIdx]][meal];
@@ -239,7 +271,22 @@ export function generateSmartWeeklyPlanWithMeta(
     if (ctx.isDinner && opts.kidsFriendlyDinners) apply(isKidsFriendlyDinner);
     if (ctx.previousMealRecipe && opts.balancedProteins) {
       const prevGroup = proteinGroup(ctx.previousMealRecipe);
-      if (prevGroup) apply((r) => proteinGroup(r) !== prevGroup);
+      if (prevGroup) {
+        const nonPrev = available.filter((r) => proteinGroup(r) !== prevGroup);
+        if (opts.prioritizeMeatOverFish && fishCookedCount >= opts.maxFishMealsPerWeek) {
+          const nonPrevNonFish = nonPrev.filter((r) => !isFishRecipe(r));
+          if (nonPrevNonFish.length > 0) {
+            available = nonPrevNonFish;
+          }
+        } else if (nonPrev.length > 0) {
+          available = nonPrev;
+        }
+      }
+    }
+
+    if (opts.prioritizeMeatOverFish && fishCookedCount >= opts.maxFishMealsPerWeek) {
+      const nonFish = available.filter((r) => !isFishRecipe(r));
+      if (nonFish.length > 0) available = nonFish;
     }
 
     const unused = available.filter((r) => !usedRecipeIds.has(r.id));
@@ -255,6 +302,10 @@ export function generateSmartWeeklyPlanWithMeta(
       if (r.batchCooking) weight += 3;
       if (ctx.isDinner && r.kidsNotes) weight += 2;
       if (ctx.isDinner && opts.prioritizeAirFryerDinners && isAirFryerRecipe(r)) weight += 4;
+      if (opts.prioritizeMeatOverFish) {
+        if (isMeatRecipe(r)) weight += 5;
+        if (isFishRecipe(r) && isPreferredFish(r)) weight += 1;
+      }
       if (r.rating >= 4) weight += r.rating - 3;
       for (let i = 0; i < weight; i++) weighted.push(r);
     });
@@ -322,6 +373,9 @@ export function generateSmartWeeklyPlanWithMeta(
     setSlot(dayIdx, meal, { kind: 'recipe', recipeId: recipe.id });
     usedRecipeIds.add(recipe.id);
     lastCookedDay.set(recipe.id, dayIdx);
+    if (isFishRecipe(recipe)) {
+      fishCookedCount += 1;
+    }
     placeLeftovers(dayIdx, meal, recipe);
   }
 

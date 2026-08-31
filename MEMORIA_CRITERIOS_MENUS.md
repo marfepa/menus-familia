@@ -26,11 +26,14 @@ Este documento sirve como **registro vivo y manual operativo** para diseñar los
 
 ---
 
-### 3. 🥩 Alto Aporte de Proteína de Calidad
+### 3. 🥩 Alto Aporte de Proteína de Calidad & Priorización de Carne
 - **Objetivo**: Saciedad prolongada, crecimiento de los niños y energía constante (25-35g por ración de adulto).
+- **Preferencia familiar**:
+  - **Prioridad a la carne**: Se priorizan las carnes magras (ternera magra, pechuga/muslo de pollo, pavo) en comidas y cenas por encima del pescado.
+  - **Frecuencia de pescado acotada**: Máximo 1–2 veces por semana, concentrado en especies favoritas y de fácil aceptación infantil (merluza, dorada, salmón o bonito/atún limpio).
 - **Fuentes prioritarias**:
-  - **Pescados**: Salmón (omega-3), merluza, dorada, lubina, gambas, atún en aceite de oliva.
-  - **Aves y carnes magras**: Pechuga de pollo, pavo en dados/filetes, carne picada de ternera magra.
+  - **Aves y carnes magras (Prioritarias)**: Pechuga de pollo, pavo en dados/filetes, ternera magra en tiras (fajitas) o picada (hamburguesas, tacos, albóndigas).
+  - **Pescados (~2 veces/semana)**: Merluza, dorada, salmón fresco y bonito del norte / atún.
   - **Huevos camperos**: En tortillas jugosas, revueltos cremosos o huevos duros cocidos.
   - **Lácteos proteicos**: Queso fresco, mozzarella, havarti o quesitos para cremas.
 
@@ -101,4 +104,9 @@ Este documento sirve como **registro vivo y manual operativo** para diseñar los
   - **Generador con preferencia inteligente**: Opción activable `Cenas Air-Fryer` que pondera positivamente las recetas en freidora de aire en las cenas de lunes a jueves sin romper la rotación de proteínas ni el pilar gluten-light.
   - **Filtros rápidos & Badges visuales**: Botón directo `[♨️ Air-Fryer]` en el recetario y en el selector de platos de la semana, badges en tarjetas y fichas con parámetros exactos de temperatura y tiempo.
   - **5 nuevas recetas familiares/BLW en Air-Fryer**: Salmón crujiente con calabacín (12 min), bastoncitos de pollo crujiente al limón sin gluten (14 min), hamburguesitas caseras con dados de boniato (14 min), lomos de merluza dorada con brócoli tostado (10 min) y fajitas de pollo en tiras a la cesta (15 min).
+
+- **31/08/2026 (fajitas/tacos de carne y priorización de proteína cárnica)**:
+  - **Nuevas recetas de ternera**: *Fajitas de Ternera en Tiras con Pimientos Salteados y Guacamole Casero* (`rec-28`, 18 min) y *Tacos Caseros de Ternera Picada Suave con Aguacate y Queso Fundido* (`rec-29`, 15 min, sartén/Air-Fryer), ambas 100% en tortillas de maíz sin gluten.
+  - **Generador con preferencia de carne sobre pescado**: Mayor ponderación para recetas de carnicería/aves y acotación inteligente de raciones de pescado a un máximo de 2 por semana (priorizando salmón, merluza y dorada).
+
 
