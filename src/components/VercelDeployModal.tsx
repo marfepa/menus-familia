@@ -27,28 +27,30 @@ export const VercelDeployModal: React.FC<VercelDeployModalProps> = ({ isOpen, on
       linkText: 'Abrir GitHub (Crear Repo)',
     },
     {
-      title: '2. Vincular el proyecto local y subir los cambios',
-      desc: 'Ejecuta estos comandos en tu terminal para sincronizar el código con tu repositorio:',
+      title: '2. Subir el código a GitHub',
+      desc: 'Ejecuta estos comandos en tu terminal para vincular y subir la app:',
       commands: [
-        'git init',
-        'git add .',
-        'git commit -m "feat: planificador de menus y lista de compras familiar"',
-        'git branch -M main',
         'git remote add origin https://github.com/TU_USUARIO/menus-familia.git',
+        'git branch -M main',
         'git push -u origin main',
       ],
     },
     {
-      title: '3. Conectar e importar en Vercel',
-      desc: 'Entra en Vercel, pulsa "Add New... -> Project" e importa tu repositorio "menus-familia". Vercel detectará automáticamente Next.js y lo desplegará en segundos.',
+      title: '3. Importar el proyecto en Vercel',
+      desc: 'Entra en Vercel, pulsa "Add New... -> Project" e importa tu repositorio "menus-familia". Pulsa "Deploy".',
       url: 'https://vercel.com/new',
       linkText: 'Abrir Vercel (Importar Proyecto)',
     },
     {
-      title: '4. ¡Listo! Actualizaciones automáticas',
-      desc: 'Cada vez que hagas cambios y los subas a GitHub ("git push"), Vercel actualizará tu web automáticamente y podrás acceder desde cualquier móvil o tablet con tu URL.',
+      title: '4. Activar Sincronización Familiar (1 Clic, 100% Gratis)',
+      desc: 'En tu proyecto de Vercel, ve a la pestaña "Storage" -> pulsa "Connect Database" -> selecciona "KV" (o "Upstash Redis") -> "Create Free". ¡Vercel conectará automáticamente la base de datos compartida sin configurar nada más!',
+    },
+    {
+      title: '5. ¡Menú y compra compartidos en tiempo real!',
+      desc: 'Abre la URL de Vercel en tu móvil y en el de tu mujer (puedes pulsar "Añadir a pantalla de inicio" para tenerla como app). Cualquier cambio en el menú, la despensa o la compra se sincronizará automáticamente para ambos.',
     },
   ];
+
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">

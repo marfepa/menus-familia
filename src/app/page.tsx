@@ -12,8 +12,10 @@ import {
   DynamicPantryItem,
   ExcludedFoodItem,
   GenerateMode,
+  SyncStatusState,
 } from '@/types';
 import { Storage } from '@/lib/storage';
+import { syncManager } from '@/lib/syncManager';
 import { getMonday, getRelativeWeekMonday } from '@/lib/utils';
 import { generateShoppingListFromPlan } from '@/lib/shoppingListGenerator';
 import { analyzePlanWarnings, generateSmartWeeklyPlanWithMeta } from '@/lib/menuGenerator';
@@ -43,6 +45,8 @@ export default function Home() {
   const [pantry, setPantry] = useState<DynamicPantryItem[]>([]);
   const [excludedFoods, setExcludedFoods] = useState<ExcludedFoodItem[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [syncStatus, setSyncStatus] = useState<SyncStatusState>('synced');
+
 
   const [slotModalInfo, setSlotModalInfo] = useState<{ day: DayOfWeek; type: 'lunch' | 'dinner' } | null>(null);
   const [recipeToView, setRecipeToView] = useState<Recipe | null>(null);
@@ -81,7 +85,38 @@ export default function Home() {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    syncManager.init();
+
+    const unsubData = syncManager.subscribeData((payload) => {
+      setRecipes(payload.recipes);
+      setSettings(payload.settings);
+      setPantry(payload.pantry);
+      setExcludedFoods(payload.excludedFoods);
+      const plan = payload.plans[currentWeekStartDate] || Storage.getPlanForWeek(currentWeekStartDate);
+      setWeeklyPlan(plan);
+      setWarnings(analyzePlanWarnings(plan, payload.recipes, payload.excludedFoods));
+      const list = payload.shoppingLists[currentWeekStartDate] || Storage.getShoppingList(currentWeekStartDate);
+      if (list) {
+        setShoppingItems(list);
+      } else {
+        const generated = generateShoppingListFromPlan(plan, payload.recipes, {
+          householdServings: payload.settings.householdServings,
+          pantry: payload.pantry,
+        });
+        setShoppingItems(generated);
+      }
+    });
+
+    const unsubStatus = syncManager.subscribeStatus((st) => {
+      setSyncStatus(st);
+    });
+
+    return () => {
+      unsubData();
+      unsubStatus();
+      syncManager.destroy();
+    };
+  }, [loadData, currentWeekStartDate]);
 
   const persistPlan = (
     nextPlan: WeeklyPlan,
@@ -101,7 +136,9 @@ export default function Home() {
     });
     setShoppingItems(updated);
     Storage.saveShoppingList(nextPlan.weekStartDate, updated);
+    syncManager.triggerSync();
   };
+
 
   const handleAssignRecipeToSlot = (recipeId: string, asLeftover = false) => {
     if (!slotModalInfo || !weeklyPlan) return;
@@ -195,12 +232,14 @@ export default function Home() {
     const next = { ...settings, generateMode: mode };
     setSettings(next);
     Storage.saveSettings(next);
+    syncManager.triggerSync();
   };
 
   const handleToggleAirFryerDinners = (val: boolean) => {
     const next = { ...settings, prioritizeAirFryerDinners: val };
     setSettings(next);
     Storage.saveSettings(next);
+    syncManager.triggerSync();
   };
 
   const handleHouseholdServingsChange = (servings: number) => {
@@ -274,6 +313,7 @@ export default function Home() {
     Storage.saveShoppingList(currentWeekStartDate, updated);
     setPantry(updatedPantry);
     Storage.savePantry(updatedPantry);
+    syncManager.triggerSync();
   };
 
   const handleAddCustomShoppingItem = (
@@ -299,18 +339,21 @@ export default function Home() {
     const updated = [...shoppingItems, newItem];
     setShoppingItems(updated);
     Storage.saveShoppingList(currentWeekStartDate, updated);
+    syncManager.triggerSync();
   };
 
   const handleDeleteShoppingItem = (itemId: string) => {
     const updated = shoppingItems.filter((item) => item.id !== itemId);
     setShoppingItems(updated);
     Storage.saveShoppingList(currentWeekStartDate, updated);
+    syncManager.triggerSync();
   };
 
   const handleClearCheckedShoppingItems = () => {
     const updated = shoppingItems.filter((item) => !item.checked);
     setShoppingItems(updated);
     Storage.saveShoppingList(currentWeekStartDate, updated);
+    syncManager.triggerSync();
   };
 
   const handleRegenerateShoppingFromMenu = () => {
@@ -324,6 +367,7 @@ export default function Home() {
     setExcludedFoods(next);
     Storage.saveExcludedFoods(next);
     if (weeklyPlan) setWarnings(analyzePlanWarnings(weeklyPlan, recipes, next));
+    syncManager.triggerSync();
   };
 
   const handleRemoveExcludedFood = (id: string) => {
@@ -331,6 +375,7 @@ export default function Home() {
     setExcludedFoods(next);
     Storage.saveExcludedFoods(next);
     if (weeklyPlan) setWarnings(analyzePlanWarnings(weeklyPlan, recipes, next));
+    syncManager.triggerSync();
   };
 
   const handleSaveRecipe = (recipeData: Recipe) => {
@@ -344,6 +389,7 @@ export default function Home() {
     setRecipes(nextRecipes);
     Storage.saveRecipes(nextRecipes);
     if (weeklyPlan) persistPlan(weeklyPlan, nextRecipes, settings, pantry, excludedFoods);
+    else syncManager.triggerSync();
   };
 
   const handleDeleteRecipe = (recipeId: string) => {
@@ -361,6 +407,7 @@ export default function Home() {
     );
     setRecipes(nextRecipes);
     Storage.saveRecipes(nextRecipes);
+    syncManager.triggerSync();
   };
 
   // Conteo de elementos que caducan pronto en la despensa para el badge de navegación
@@ -384,10 +431,13 @@ export default function Home() {
         expiringPantryCount={expiringPantryCount}
         recipesCount={recipes.length}
         excludedFoodsCount={excludedFoods.length}
+        syncStatus={syncStatus}
+        onTriggerSync={() => syncManager.pullFromCloud(true)}
         onOpenDeployModal={() => setIsDeployModalOpen(true)}
         onOpenBackupModal={() => setIsBackupModalOpen(true)}
         onOpenExcludedFoodsModal={() => setIsExcludedModalOpen(true)}
       />
+
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6">
         {activeTab === 'planner' && (

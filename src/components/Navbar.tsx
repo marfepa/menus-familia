@@ -1,5 +1,6 @@
 import React from 'react';
-import { Calendar, ShoppingCart, BookOpen, UploadCloud, Database, Refrigerator, Ban } from 'lucide-react';
+import { Calendar, ShoppingCart, BookOpen, UploadCloud, Database, Refrigerator, Ban, RefreshCw, Cloud, WifiOff, Check } from 'lucide-react';
+import type { SyncStatusState } from '@/types';
 
 interface NavbarProps {
   activeTab: 'planner' | 'shopping' | 'pantry' | 'recipes';
@@ -9,10 +10,13 @@ interface NavbarProps {
   expiringPantryCount?: number;
   recipesCount: number;
   excludedFoodsCount?: number;
+  syncStatus?: SyncStatusState;
+  onTriggerSync?: () => void;
   onOpenDeployModal: () => void;
   onOpenBackupModal: () => void;
   onOpenExcludedFoodsModal: () => void;
 }
+
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
@@ -22,6 +26,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   expiringPantryCount = 0,
   recipesCount,
   excludedFoodsCount = 0,
+  syncStatus = 'synced',
+  onTriggerSync,
   onOpenDeployModal,
   onOpenBackupModal,
   onOpenExcludedFoodsModal,
@@ -115,8 +121,57 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </nav>
 
-          {/* Acciones secundarias: Alimentos Vetados, Backup y Despliegue Vercel */}
+          {/* Acciones secundarias: Sincronización, Alimentos Vetados, Backup y Despliegue Vercel */}
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Badge de Sincronización en Tiempo Real */}
+            <button
+              onClick={onTriggerSync || onOpenDeployModal}
+              title={
+                syncStatus === 'synced'
+                  ? 'Nube compartida al día (Clic para sincronizar ahora)'
+                  : syncStatus === 'syncing'
+                  ? 'Sincronizando cambios con la familia...'
+                  : syncStatus === 'offline'
+                  ? 'Sin conexión a internet (modo offline)'
+                  : 'Modo local: Clic para ver cómo compartir en Vercel'
+              }
+              className={`flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                syncStatus === 'synced'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                  : syncStatus === 'syncing'
+                  ? 'bg-amber-50 text-amber-800 border-amber-200 animate-pulse'
+                  : syncStatus === 'offline'
+                  ? 'bg-slate-100 text-slate-600 border-slate-200'
+                  : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+              }`}
+            >
+              {syncStatus === 'synced' && (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                  <span className="hidden xl:inline">Compartido</span>
+                  <RefreshCw className="w-3 h-3 text-emerald-600 opacity-60 hover:opacity-100" />
+                </>
+              )}
+              {syncStatus === 'syncing' && (
+                <>
+                  <RefreshCw className="w-3 h-3 text-amber-600 animate-spin" />
+                  <span className="hidden xl:inline">Guardando...</span>
+                </>
+              )}
+              {syncStatus === 'offline' && (
+                <>
+                  <WifiOff className="w-3 h-3 text-slate-500" />
+                  <span className="hidden xl:inline">Offline</span>
+                </>
+              )}
+              {(syncStatus === 'local_only' || syncStatus === 'error') && (
+                <>
+                  <Cloud className="w-3 h-3 text-slate-500" />
+                  <span className="hidden sm:inline">Nube</span>
+                </>
+              )}
+            </button>
+
             <button
               onClick={onOpenExcludedFoodsModal}
               title="Alimentos no deseados / Vetados en menús"
@@ -153,3 +208,4 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+

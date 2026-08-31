@@ -292,3 +292,25 @@ export const DAYS_CONFIG: Array<{ id: DayOfWeek; label: string; short: string }>
   { id: 'domingo', label: 'Domingo', short: 'Dom' },
 ];
 
+export interface FamilySyncPayload {
+  version: number;
+  updatedAt: string;
+  deviceId?: string;
+  recipes: Recipe[];
+  plans: Record<string, WeeklyPlan>;
+  shoppingLists: Record<string, ShoppingItem[]>;
+  settings: AppSettings;
+  pantry: DynamicPantryItem[];
+  excludedFoods: ExcludedFoodItem[];
+}
+
+export type SyncStatusState = 'synced' | 'syncing' | 'local_only' | 'error' | 'offline';
+
+export interface CloudStoreStatus {
+  configured: boolean;
+  provider: 'upstash' | 'local_file' | 'memory' | 'unconfigured';
+  lastUpdated?: string;
+  message?: string;
+}
+
+
