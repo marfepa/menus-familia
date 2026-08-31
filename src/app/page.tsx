@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Recipe,
   WeeklyPlan,
@@ -9,7 +9,8 @@ import {
   IngredientCategory,
   PackageFormat,
   AppSettings,
-  PantryItem,
+  DynamicPantryItem,
+  ExcludedFoodItem,
   GenerateMode,
 } from '@/types';
 import { Storage } from '@/lib/storage';
@@ -17,11 +18,15 @@ import { getMonday, getRelativeWeekMonday } from '@/lib/utils';
 import { generateShoppingListFromPlan } from '@/lib/shoppingListGenerator';
 import { analyzePlanWarnings, generateSmartWeeklyPlanWithMeta } from '@/lib/menuGenerator';
 import { clonePlanForWeek, emptyWeeklyPlan, isPlanEmpty } from '@/lib/planUtils';
+import { createPantryItemFromShopping, calculateShelfLifeInfo } from '@/lib/pantryUtils';
+import { normalizeText } from '@/lib/shoppingListGenerator';
 
 import { Navbar } from '@/components/Navbar';
 import { WeekPlanner } from '@/components/WeekPlanner';
 import { ShoppingListView } from '@/components/ShoppingListView';
+import { PantryView } from '@/components/PantryView';
 import { RecipesView } from '@/components/RecipesView';
+import { ExcludedFoodsModal } from '@/components/ExcludedFoodsModal';
 import { RecipeModal } from '@/components/RecipeModal';
 import { RecipeDetailModal } from '@/components/RecipeDetailModal';
 import { RecipeFormModal } from '@/components/RecipeFormModal';
@@ -29,13 +34,14 @@ import { VercelDeployModal } from '@/components/VercelDeployModal';
 import { BackupModal } from '@/components/BackupModal';
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'planner' | 'shopping' | 'recipes'>('planner');
+  const [activeTab, setActiveTab] = useState<'planner' | 'shopping' | 'pantry' | 'recipes'>('planner');
   const [currentWeekStartDate, setCurrentWeekStartDate] = useState<string>(getMonday(new Date()));
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan | null>(null);
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const [settings, setSettings] = useState<AppSettings>({ householdServings: 4, generateMode: 'full' });
-  const [pantry, setPantry] = useState<PantryItem[]>([]);
+  const [pantry, setPantry] = useState<DynamicPantryItem[]>([]);
+  const [excludedFoods, setExcludedFoods] = useState<ExcludedFoodItem[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
 
   const [slotModalInfo, setSlotModalInfo] = useState<{ day: DayOfWeek; type: 'lunch' | 'dinner' } | null>(null);
@@ -44,6 +50,7 @@ export default function Home() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+  const [isExcludedModalOpen, setIsExcludedModalOpen] = useState(false);
 
   const loadData = useCallback(() => {
     const loadedRecipes = Storage.getRecipes();
@@ -52,10 +59,12 @@ export default function Home() {
     setSettings(loadedSettings);
     const loadedPantry = Storage.getPantry();
     setPantry(loadedPantry);
+    const loadedExcluded = Storage.getExcludedFoods();
+    setExcludedFoods(loadedExcluded);
 
     const loadedPlan = Storage.getPlanForWeek(currentWeekStartDate);
     setWeeklyPlan(loadedPlan);
-    setWarnings(analyzePlanWarnings(loadedPlan, loadedRecipes));
+    setWarnings(analyzePlanWarnings(loadedPlan, loadedRecipes, loadedExcluded));
 
     const savedList = Storage.getShoppingList(currentWeekStartDate);
     if (savedList) {
@@ -74,10 +83,16 @@ export default function Home() {
     loadData();
   }, [loadData]);
 
-  const persistPlan = (nextPlan: WeeklyPlan, currentRecipes = recipes, currentSettings = settings, currentPantry = pantry) => {
+  const persistPlan = (
+    nextPlan: WeeklyPlan,
+    currentRecipes = recipes,
+    currentSettings = settings,
+    currentPantry = pantry,
+    currentExcluded = excludedFoods
+  ) => {
     setWeeklyPlan(nextPlan);
     Storage.savePlan(nextPlan);
-    setWarnings(analyzePlanWarnings(nextPlan, currentRecipes));
+    setWarnings(analyzePlanWarnings(nextPlan, currentRecipes, currentExcluded));
     const currentList = Storage.getShoppingList(nextPlan.weekStartDate);
     const updated = generateShoppingListFromPlan(nextPlan, currentRecipes, {
       existingShoppingList: currentList,
@@ -150,10 +165,10 @@ export default function Home() {
     const { plan, warnings: nextWarnings } = generateSmartWeeklyPlanWithMeta(
       currentWeekStartDate,
       recipes,
-      { mode: settings.generateMode }
+      { mode: settings.generateMode, excludedFoods }
     );
     setWarnings(nextWarnings);
-    persistPlan(plan);
+    persistPlan(plan, recipes, settings, pantry, excludedFoods);
   };
 
   const handleClearWeek = () => {
@@ -180,22 +195,73 @@ export default function Home() {
     const next = { ...settings, householdServings: servings };
     setSettings(next);
     Storage.saveSettings(next);
-    if (weeklyPlan) persistPlan(weeklyPlan, recipes, next, pantry);
+    if (weeklyPlan) persistPlan(weeklyPlan, recipes, next, pantry, excludedFoods);
   };
 
+  // Toggle de un staple básico en la despensa
   const handleTogglePantryItem = (id: string) => {
     const next = pantry.map((item) => (item.id === id ? { ...item, inStock: !item.inStock } : item));
     setPantry(next);
     Storage.savePantry(next);
-    if (weeklyPlan) persistPlan(weeklyPlan, recipes, settings, next);
+    if (weeklyPlan) persistPlan(weeklyPlan, recipes, settings, next, excludedFoods);
   };
 
+  // Acciones completas de Despensa Viva
+  const handleAddPantryItem = (newItem: DynamicPantryItem) => {
+    const next = [newItem, ...pantry];
+    setPantry(next);
+    Storage.savePantry(next);
+    if (weeklyPlan) persistPlan(weeklyPlan, recipes, settings, next, excludedFoods);
+  };
+
+  const handleRemovePantryItem = (id: string) => {
+    const next = pantry.filter((item) => item.id !== id);
+    setPantry(next);
+    Storage.savePantry(next);
+    if (weeklyPlan) persistPlan(weeklyPlan, recipes, settings, next, excludedFoods);
+  };
+
+  const handleUpdatePantryItem = (updatedItem: DynamicPantryItem) => {
+    const next = pantry.map((item) => (item.id === updatedItem.id ? updatedItem : item));
+    setPantry(next);
+    Storage.savePantry(next);
+    if (weeklyPlan) persistPlan(weeklyPlan, recipes, settings, next, excludedFoods);
+  };
+
+  // Al marcar un producto como comprado en la lista de la compra, se añade automáticamente a la despensa
   const handleToggleShoppingItem = (itemId: string) => {
-    const updated = shoppingItems.map((item) =>
-      item.id === itemId ? { ...item, checked: !item.checked } : item
-    );
+    let updatedPantry = [...pantry];
+
+    const updated = shoppingItems.map((item) => {
+      if (item.id === itemId) {
+        const nextChecked = !item.checked;
+
+        if (nextChecked) {
+          // Marcar como comprado -> incorporar a la despensa o actualizar fecha de stock
+          const existingIdx = updatedPantry.findIndex(
+            (p) => normalizeText(p.name) === normalizeText(item.name)
+          );
+
+          if (existingIdx >= 0) {
+            updatedPantry[existingIdx] = {
+              ...updatedPantry[existingIdx],
+              inStock: true,
+              addedDate: new Date().toISOString().slice(0, 10),
+            };
+          } else {
+            const newPantryItem = createPantryItemFromShopping(item);
+            updatedPantry = [newPantryItem, ...updatedPantry];
+          }
+        }
+        return { ...item, checked: nextChecked };
+      }
+      return item;
+    });
+
     setShoppingItems(updated);
     Storage.saveShoppingList(currentWeekStartDate, updated);
+    setPantry(updatedPantry);
+    Storage.savePantry(updatedPantry);
   };
 
   const handleAddCustomShoppingItem = (
@@ -237,7 +303,22 @@ export default function Home() {
 
   const handleRegenerateShoppingFromMenu = () => {
     if (!weeklyPlan) return;
-    persistPlan(weeklyPlan);
+    persistPlan(weeklyPlan, recipes, settings, pantry, excludedFoods);
+  };
+
+  // Gestión de Alimentos Vetados
+  const handleAddExcludedFood = (item: ExcludedFoodItem) => {
+    const next = [item, ...excludedFoods];
+    setExcludedFoods(next);
+    Storage.saveExcludedFoods(next);
+    if (weeklyPlan) setWarnings(analyzePlanWarnings(weeklyPlan, recipes, next));
+  };
+
+  const handleRemoveExcludedFood = (id: string) => {
+    const next = excludedFoods.filter((f) => f.id !== id);
+    setExcludedFoods(next);
+    Storage.saveExcludedFoods(next);
+    if (weeklyPlan) setWarnings(analyzePlanWarnings(weeklyPlan, recipes, next));
   };
 
   const handleSaveRecipe = (recipeData: Recipe) => {
@@ -250,7 +331,7 @@ export default function Home() {
     }
     setRecipes(nextRecipes);
     Storage.saveRecipes(nextRecipes);
-    if (weeklyPlan) persistPlan(weeklyPlan, nextRecipes);
+    if (weeklyPlan) persistPlan(weeklyPlan, nextRecipes, settings, pantry, excludedFoods);
   };
 
   const handleDeleteRecipe = (recipeId: string) => {
@@ -259,7 +340,7 @@ export default function Home() {
     Storage.saveRecipes(nextRecipes);
     Storage.removeRecipeFromAllPlans(recipeId);
     const refreshed = Storage.getPlanForWeek(currentWeekStartDate);
-    persistPlan(refreshed, nextRecipes);
+    persistPlan(refreshed, nextRecipes, settings, pantry, excludedFoods);
   };
 
   const handleToggleFavoriteRecipe = (recipeId: string) => {
@@ -270,6 +351,15 @@ export default function Home() {
     Storage.saveRecipes(nextRecipes);
   };
 
+  // Conteo de elementos que caducan pronto en la despensa para el badge de navegación
+  const expiringPantryCount = useMemo(() => {
+    return pantry.filter((item) => {
+      if (!item.inStock) return false;
+      const info = calculateShelfLifeInfo(item);
+      return info.status === 'critical' || info.status === 'expired';
+    }).length;
+  }, [pantry]);
+
   if (!weeklyPlan) return null;
 
   return (
@@ -278,9 +368,13 @@ export default function Home() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         shoppingItemsCount={shoppingItems.filter((i) => !i.checked).length}
+        pantryItemsCount={pantry.filter((i) => i.inStock).length}
+        expiringPantryCount={expiringPantryCount}
         recipesCount={recipes.length}
+        excludedFoodsCount={excludedFoods.length}
         onOpenDeployModal={() => setIsDeployModalOpen(true)}
         onOpenBackupModal={() => setIsBackupModalOpen(true)}
+        onOpenExcludedFoodsModal={() => setIsExcludedModalOpen(true)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6">
@@ -316,6 +410,16 @@ export default function Home() {
             onRegenerateFromMenu={handleRegenerateShoppingFromMenu}
             pantry={pantry}
             onTogglePantryItem={handleTogglePantryItem}
+          />
+        )}
+
+        {activeTab === 'pantry' && (
+          <PantryView
+            pantry={pantry}
+            onRemoveItem={handleRemovePantryItem}
+            onAddItem={handleAddPantryItem}
+            onUpdateItem={handleUpdatePantryItem}
+            onToggleStock={handleTogglePantryItem}
           />
         )}
 
@@ -380,6 +484,14 @@ export default function Home() {
         recipeToEdit={recipeToEdit}
       />
 
+      <ExcludedFoodsModal
+        isOpen={isExcludedModalOpen}
+        onClose={() => setIsExcludedModalOpen(false)}
+        excludedFoods={excludedFoods}
+        onAddExcludedFood={handleAddExcludedFood}
+        onRemoveExcludedFood={handleRemoveExcludedFood}
+      />
+
       <VercelDeployModal
         isOpen={isDeployModalOpen}
         onClose={() => setIsDeployModalOpen(false)}
@@ -393,3 +505,4 @@ export default function Home() {
     </div>
   );
 }
+

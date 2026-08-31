@@ -1,5 +1,6 @@
-import type { Recipe, WeeklyPlan, GenerateMode, MealSlotData } from '@/types';
+import type { Recipe, WeeklyPlan, GenerateMode, MealSlotData, ExcludedFoodItem } from '@/types';
 import { PLAN_DAYS, emptyWeeklyPlan, getSlotKind } from '@/lib/planUtils';
+import { matchesExcludedFood } from '@/lib/pantryUtils';
 
 export interface GenerationOptions {
   prioritizeFavorites?: boolean;
@@ -8,6 +9,7 @@ export interface GenerationOptions {
   glutenLight?: boolean;
   kidsFriendlyDinners?: boolean;
   mode?: GenerateMode;
+  excludedFoods?: ExcludedFoodItem[];
   rng?: () => number;
 }
 
@@ -49,7 +51,29 @@ export function isKidsFriendlyDinner(recipe: Recipe): boolean {
   );
 }
 
-export function analyzePlanWarnings(plan: WeeklyPlan, recipes: Recipe[]): string[] {
+export function recipeContainsExcludedFood(recipe: Recipe, excludedFoods: ExcludedFoodItem[] = []): ExcludedFoodItem | undefined {
+  if (!excludedFoods || excludedFoods.length === 0) return undefined;
+  const matchName = matchesExcludedFood(recipe.name, excludedFoods);
+  if (matchName) return matchName;
+
+  for (const tag of recipe.tags) {
+    const matchTag = matchesExcludedFood(tag, excludedFoods);
+    if (matchTag) return matchTag;
+  }
+
+  for (const ing of recipe.ingredients) {
+    const matchIng = matchesExcludedFood(ing.name, excludedFoods);
+    if (matchIng) return matchIng;
+  }
+
+  return undefined;
+}
+
+export function analyzePlanWarnings(
+  plan: WeeklyPlan,
+  recipes: Recipe[],
+  excludedFoods: ExcludedFoodItem[] = []
+): string[] {
   const recipeMap = new Map(recipes.map((r) => [r.id, r]));
   const warnings: string[] = [];
   let leftoverCount = 0;
@@ -57,6 +81,7 @@ export function analyzePlanWarnings(plan: WeeklyPlan, recipes: Recipe[]): string
   let glutenMeals = 0;
   let dinnersWithoutKids = 0;
   let dinnerCount = 0;
+  const excludedViolations: string[] = [];
 
   PLAN_DAYS.forEach((day) => {
     const lunch = plan.days[day]?.lunch;
@@ -71,12 +96,25 @@ export function analyzePlanWarnings(plan: WeeklyPlan, recipes: Recipe[]): string
       if (!isKidsFriendlyDinner(dinnerRecipe)) dinnersWithoutKids += 1;
     }
 
-    [lunch, dinner].forEach((slot) => {
+    [
+      { slot: lunch, mealLabel: 'comida' },
+      { slot: dinner, mealLabel: 'cena' },
+    ].forEach(({ slot, mealLabel }) => {
       if (getSlotKind(slot) !== 'recipe' || !slot?.recipeId) return;
       const rec = recipeMap.get(slot.recipeId);
       if (rec && !recipeIsGlutenLight(rec)) glutenMeals += 1;
+      if (rec && excludedFoods.length > 0) {
+        const match = recipeContainsExcludedFood(rec, excludedFoods);
+        if (match) {
+          excludedViolations.push(`${rec.name} (${day}, ${mealLabel} contiene '${match.name}')`);
+        }
+      }
     });
   });
+
+  if (excludedViolations.length > 0) {
+    warnings.push(`⚠️ Platos con alimentos vetados: ${excludedViolations.join('; ')}.`);
+  }
 
   const hasCookedSlots = PLAN_DAYS.some((day) => {
     const d = plan.days[day];
@@ -124,6 +162,7 @@ export function generateSmartWeeklyPlanWithMeta(
     glutenLight: options.glutenLight ?? true,
     kidsFriendlyDinners: options.kidsFriendlyDinners ?? true,
     mode: options.mode ?? 'full',
+    excludedFoods: options.excludedFoods ?? [],
     rng: options.rng ?? Math.random,
   };
 
@@ -132,10 +171,17 @@ export function generateSmartWeeklyPlanWithMeta(
     return { plan, warnings: ['No hay recetas en el recetario.'] };
   }
 
-  const lunchPool = recipes.filter((r) => r.mealType === 'lunch' || r.mealType === 'both');
-  const dinnerPool = recipes.filter((r) => r.mealType === 'dinner' || r.mealType === 'both');
-  const validLunch = lunchPool.length > 0 ? lunchPool : recipes;
-  const validDinner = dinnerPool.length > 0 ? dinnerPool : recipes;
+  const excluded = opts.excludedFoods || [];
+  const allowedRecipes = excluded.length > 0
+    ? recipes.filter((r) => !recipeContainsExcludedFood(r, excluded))
+    : recipes;
+
+  const candidatePool = allowedRecipes.length > 0 ? allowedRecipes : recipes;
+
+  const lunchPool = candidatePool.filter((r) => r.mealType === 'lunch' || r.mealType === 'both');
+  const dinnerPool = candidatePool.filter((r) => r.mealType === 'dinner' || r.mealType === 'both');
+  const validLunch = lunchPool.length > 0 ? lunchPool : candidatePool;
+  const validDinner = dinnerPool.length > 0 ? dinnerPool : candidatePool;
 
   const usedRecipeIds = new Set<string>();
   const lastCookedDay = new Map<string, number>();
@@ -292,5 +338,10 @@ export function generateSmartWeeklyPlanWithMeta(
     }
   }
 
-  return { plan, warnings: analyzePlanWarnings(plan, recipes) };
+  const generatedWarnings = analyzePlanWarnings(plan, recipes, opts.excludedFoods);
+  if (allowedRecipes.length === 0 && recipes.length > 0 && excluded.length > 0) {
+    generatedWarnings.unshift('⚠️ No hay suficientes recetas sin los alimentos vetados seleccionados.');
+  }
+
+  return { plan, warnings: generatedWarnings };
 }

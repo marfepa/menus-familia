@@ -107,16 +107,35 @@ export interface ShoppingItem {
   period?: 'weekday' | 'weekend' | 'both'; // Para filtrar por tramo de compra
 }
 
-export interface PantryItem {
+export interface DynamicPantryItem {
   id: string;
   name: string;
   inStock: boolean;
   matchKeywords: string[];
+  category?: IngredientCategory;
+  addedDate?: string; // Formato YYYY-MM-DD
+  shelfLifeDays?: number; // Días estimados de duración óptima
+  quantity?: number;
+  unit?: string;
+  commercialFormat?: string;
+  packageFormat?: PackageFormat;
+  source?: 'shopping_list' | 'manual' | 'staple';
+}
+
+export type PantryItem = DynamicPantryItem;
+
+export interface ExcludedFoodItem {
+  id: string;
+  name: string;
+  matchKeywords: string[];
+  reason?: string; // ej. "Alergia/Intolerancia", "No gusta a los niños", "Preferencia"
+  addedDate: string;
 }
 
 export interface AppSettings {
   householdServings: number;
   generateMode: GenerateMode;
+  excludedFoods?: ExcludedFoodItem[];
 }
 
 export const PACKAGE_FORMAT_CONFIG: Record<

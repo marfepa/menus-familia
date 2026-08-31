@@ -1,70 +1,102 @@
-import type { AppSettings, PantryItem } from '@/types';
+import type { AppSettings, DynamicPantryItem } from '@/types';
 
 export const DEFAULT_SETTINGS: AppSettings = {
   householdServings: 4,
   generateMode: 'full',
+  excludedFoods: [],
 };
 
 /** Fondo de despensa: lo marcado se resta de la lista de compra. */
-export const DEFAULT_PANTRY: PantryItem[] = [
+export const DEFAULT_PANTRY: DynamicPantryItem[] = [
   {
     id: 'aove',
     name: 'Aceite de oliva virgen extra',
     inStock: true,
+    category: 'despensa',
+    shelfLifeDays: 365,
     matchKeywords: ['aceite de oliva', 'aove', 'aceite virgen'],
+    source: 'staple',
   },
   {
     id: 'ajos',
     name: 'Ajos',
     inStock: true,
+    category: 'fruteria',
+    shelfLifeDays: 30,
     matchKeywords: ['diente de ajo', 'dientes de ajo', 'ajos', 'ajo'],
+    source: 'staple',
   },
   {
     id: 'especias',
     name: 'Especias (pimentón, orégano, laurel, maicena)',
     inStock: true,
+    category: 'despensa',
+    shelfLifeDays: 365,
     matchKeywords: ['pimenton', 'oregano', 'laurel', 'maicena', 'ajo en polvo'],
+    source: 'staple',
   },
   {
     id: 'sal',
     name: 'Sal',
     inStock: true,
+    category: 'despensa',
+    shelfLifeDays: 365,
     matchKeywords: ['sal en escamas', 'sal'],
+    source: 'staple',
   },
   {
     id: 'huevos',
     name: 'Huevos camperos',
     inStock: false,
+    category: 'lacteos',
+    shelfLifeDays: 28,
     matchKeywords: ['huevos camperos', 'huevo duro', 'huevos', 'huevo'],
+    source: 'staple',
   },
   {
     id: 'caldo',
     name: 'Caldo (brik 1L)',
     inStock: false,
+    category: 'despensa',
+    shelfLifeDays: 90,
     matchKeywords: ['caldo de pollo', 'caldo de pescado', 'caldo de verduras', 'caldo suave', 'caldo'],
+    source: 'staple',
   },
   {
     id: 'tamari',
     name: 'Salsa de soja / Tamari',
     inStock: false,
+    category: 'despensa',
+    shelfLifeDays: 180,
     matchKeywords: ['salsa de soja', 'tamari'],
+    source: 'staple',
   },
   {
     id: 'arroz',
     name: 'Arroz / quinoa (paquete o vasitos)',
     inStock: false,
+    category: 'despensa',
+    shelfLifeDays: 180,
     matchKeywords: ['arroz basmati', 'arroz jazmin', 'arroz blanco', 'arroz cocido', 'quinoa'],
+    source: 'staple',
   },
   {
     id: 'legumbres',
     name: 'Legumbres de bote',
     inStock: false,
+    category: 'despensa',
+    shelfLifeDays: 180,
     matchKeywords: ['lentejas', 'garbanzos'],
+    source: 'staple',
   },
   {
     id: 'tomate_triturado',
     name: 'Tomate triturado / frito',
     inStock: false,
+    category: 'despensa',
+    shelfLifeDays: 90,
     matchKeywords: ['tomate triturado', 'tomate frito'],
+    source: 'staple',
   },
 ];
+

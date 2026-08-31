@@ -183,4 +183,34 @@ describe('menuGenerator', () => {
     assert.equal(plan.days.sabado.lunch?.recipeId, undefined);
     assert.equal(plan.days.lunes.dinner?.recipeId, undefined);
   });
+
+  it('excluye del menú cualquier receta con ingredientes o nombres vetados', () => {
+    const salmonDish = recipe({
+      id: 'plato-salmon',
+      name: 'Salmón a la plancha con cilantro',
+      mealType: 'dinner',
+      tags: ['Pescado'],
+      ingredients: [
+        { id: 'ing-cilantro', name: 'Cilantro picado', quantity: 10, unit: 'g', category: 'fruteria' },
+      ],
+    });
+
+    const excludedFoods = [
+      { id: 'ex-1', name: 'Cilantro', matchKeywords: ['cilantro'], addedDate: '2026-08-31' },
+    ];
+
+    const { plan } = generateSmartWeeklyPlanWithMeta(
+      '2026-08-31',
+      [salmonDish, quickFish],
+      { mode: 'dinners', excludedFoods, rng }
+    );
+
+    const dinnerIds = Object.values(plan.days)
+      .map((d) => d.dinner?.recipeId)
+      .filter(Boolean);
+
+    assert.equal(dinnerIds.includes('plato-salmon'), false);
+    assert.ok(dinnerIds.includes('cena-pescado'));
+  });
 });
+

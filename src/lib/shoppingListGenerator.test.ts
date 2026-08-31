@@ -142,4 +142,46 @@ describe('shoppingListGenerator', () => {
     const list = generateShoppingListFromPlan(plan, [pollo, taquitos]);
     assert.equal(list.length, 0);
   });
+
+  it('omite ingredientes vigentes en despensa pero incluye los caducados', () => {
+    const freshPantry: PantryItem[] = [
+      {
+        id: 'p-pollo',
+        name: 'Pechuga de pollo',
+        inStock: true,
+        category: 'carniceria',
+        addedDate: '2026-08-31',
+        shelfLifeDays: 4,
+        matchKeywords: ['pechuga de pollo', 'pollo'],
+      },
+    ];
+
+    // Con pollo fresco en despensa -> no se añade a la lista de compra
+    const listFresh = generateShoppingListFromPlan(
+      planWith([{ day: 'lunes', meal: 'lunch', id: 'r1' }]),
+      [pollo],
+      { pantry: freshPantry }
+    );
+    assert.equal(listFresh.some((i) => i.id === 'item-pollo-pechuga'), false);
+
+    // Con pollo caducado hace días -> sí se añade a la lista de compra
+    const expiredPantry: PantryItem[] = [
+      {
+        id: 'p-pollo',
+        name: 'Pechuga de pollo',
+        inStock: true,
+        category: 'carniceria',
+        addedDate: '2026-08-01', // añadido hace 30 días, vida útil 4d
+        shelfLifeDays: 4,
+        matchKeywords: ['pechuga de pollo', 'pollo'],
+      },
+    ];
+    const listExpired = generateShoppingListFromPlan(
+      planWith([{ day: 'lunes', meal: 'lunch', id: 'r1' }]),
+      [pollo],
+      { pantry: expiredPantry }
+    );
+    assert.equal(listExpired.some((i) => i.id === 'item-pollo-pechuga'), true);
+  });
 });
+

@@ -28,11 +28,31 @@ export function canonicalAmount(qty: number, unit: string): { qty: number; unit:
   return { qty, unit: u || 'uds' };
 }
 
-export function isCoveredByPantry(ingredientName: string, pantry: PantryItem[] = []): boolean {
+export function isCoveredByPantry(
+  ingredientName: string,
+  pantry: PantryItem[] = [],
+  referenceDateStr?: string
+): boolean {
   const n = normalizeText(ingredientName);
+  const today = referenceDateStr ? new Date(referenceDateStr) : new Date();
+
   return pantry.some((item) => {
-    if (!item.inStock) return false;
-    return item.matchKeywords
+    if (item.inStock === false) return false;
+
+    // Si tiene fecha y vida útil, comprobar si ya ha caducado
+    if (item.addedDate && item.shelfLifeDays !== undefined) {
+      const added = new Date(item.addedDate);
+      const diffDays = Math.floor((today.getTime() - added.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays >= item.shelfLifeDays) {
+        return false; // Caducado: necesita comprarse de nuevo
+      }
+    }
+
+    const keywords = item.matchKeywords && item.matchKeywords.length > 0
+      ? item.matchKeywords
+      : [item.name];
+
+    return keywords
       .slice()
       .sort((a, b) => b.length - a.length)
       .some((kw) => {

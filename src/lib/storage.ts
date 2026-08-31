@@ -1,4 +1,4 @@
-import type { Recipe, WeeklyPlan, ShoppingItem, AppSettings, PantryItem } from '@/types';
+import type { Recipe, WeeklyPlan, ShoppingItem, AppSettings, PantryItem, ExcludedFoodItem } from '@/types';
 import { INITIAL_RECIPES } from '@/data/initialRecipes';
 import { DEFAULT_PANTRY, DEFAULT_SETTINGS } from '@/data/defaultPantry';
 import { emptyWeeklyPlan, removeRecipeFromPlans } from '@/lib/planUtils';
@@ -8,7 +8,8 @@ const STORAGE_KEYS = {
   PLANS: 'recetario_familia_plans_v3',
   SHOPPING_LISTS: 'recetario_familia_shopping_v3',
   SETTINGS: 'recetario_familia_settings_v4',
-  PANTRY: 'recetario_familia_pantry_v4',
+  PANTRY: 'recetario_familia_pantry_v5',
+  EXCLUDED_FOODS: 'recetario_familia_excluded_foods_v1',
 };
 
 function canUseStorage(): boolean {
@@ -162,12 +163,31 @@ export const Storage = {
   getPantry(): PantryItem[] {
     const saved = readJson<PantryItem[] | null>(STORAGE_KEYS.PANTRY, null);
     if (!saved || !Array.isArray(saved) || saved.length === 0) {
+      // Intentar migrar desde v4 si existe
+      if (canUseStorage()) {
+        const legacy = localStorage.getItem('recetario_familia_pantry_v4');
+        if (legacy) {
+          try {
+            const parsedLegacy: PantryItem[] = JSON.parse(legacy);
+            const mergedLegacy = DEFAULT_PANTRY.map((def) => {
+              const prev = parsedLegacy.find((p) => p.id === def.id);
+              return prev ? { ...def, inStock: prev.inStock } : { ...def };
+            });
+            const extras = parsedLegacy.filter((item) => !DEFAULT_PANTRY.some((d) => d.id === item.id));
+            const full = [...mergedLegacy, ...extras];
+            writeJson(STORAGE_KEYS.PANTRY, full);
+            return full;
+          } catch {
+            // Ignorar error de migración
+          }
+        }
+      }
       return DEFAULT_PANTRY.map((item) => ({ ...item }));
     }
     const savedMap = new Map(saved.map((item) => [item.id, item]));
     const merged = DEFAULT_PANTRY.map((def) => {
       const prev = savedMap.get(def.id);
-      return prev ? { ...def, inStock: prev.inStock } : { ...def };
+      return prev ? { ...def, ...prev } : { ...def };
     });
     const extras = saved.filter((item) => !DEFAULT_PANTRY.some((d) => d.id === item.id));
     return [...merged, ...extras];
@@ -177,15 +197,24 @@ export const Storage = {
     writeJson(STORAGE_KEYS.PANTRY, pantry);
   },
 
+  getExcludedFoods(): ExcludedFoodItem[] {
+    return readJson<ExcludedFoodItem[]>(STORAGE_KEYS.EXCLUDED_FOODS, []);
+  },
+
+  saveExcludedFoods(items: ExcludedFoodItem[]): void {
+    writeJson(STORAGE_KEYS.EXCLUDED_FOODS, items);
+  },
+
   exportBackup(): string {
     const backup = {
       timestamp: new Date().toISOString(),
-      version: 4,
+      version: 5,
       recipes: this.getRecipes(),
       plans: this.getPlans(),
       shoppingLists: this.getAllShoppingLists(),
       settings: this.getSettings(),
       pantry: this.getPantry(),
+      excludedFoods: this.getExcludedFoods(),
     };
     return JSON.stringify(backup, null, 2);
   },
@@ -209,6 +238,9 @@ export const Storage = {
       if (parsed.pantry && Array.isArray(parsed.pantry)) {
         this.savePantry(parsed.pantry);
       }
+      if (parsed.excludedFoods && Array.isArray(parsed.excludedFoods)) {
+        this.saveExcludedFoods(parsed.excludedFoods);
+      }
       return true;
     } catch (e) {
       console.error('Error al importar backup:', e);
@@ -222,6 +254,8 @@ export const Storage = {
     localStorage.removeItem(STORAGE_KEYS.PLANS);
     localStorage.removeItem(STORAGE_KEYS.SETTINGS);
     localStorage.removeItem(STORAGE_KEYS.PANTRY);
+    localStorage.removeItem(STORAGE_KEYS.EXCLUDED_FOODS);
     this.clearAllShoppingLists();
   },
 };
+

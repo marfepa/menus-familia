@@ -168,6 +168,10 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
               Los alimentos se agrupan automáticamente en sus unidades comerciales reales (mallas de 2kg, bandejas protegidas de 500g, botes de 400g, docenas) calculando el aprovechamiento entre recetas para <strong className="text-emerald-300 font-bold">desperdicio cero</strong>.
             </p>
+            <p className="text-[11px] text-emerald-300/90 font-medium flex items-center gap-1.5">
+              <span>🔋</span>
+              <span>Al tachar un artículo comprado, se transfiere automáticamente a tu <strong>Despensa</strong> con su batería de frescura activa.</span>
+            </p>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-start md:justify-end shrink-0">
