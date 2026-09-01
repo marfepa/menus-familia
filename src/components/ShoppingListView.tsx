@@ -9,9 +9,11 @@ import {
   PACKAGE_FORMAT_CONFIG,
   ShoppingPeriod,
   PantryItem,
+  AppleRemindersConfig,
 } from '@/types';
 import { formatShoppingListForShare } from '@/lib/shoppingListGenerator';
 import { formatWeekRange } from '@/lib/utils';
+import { AppleRemindersModal } from '@/components/AppleRemindersModal';
 import {
   Share2,
   Printer,
@@ -31,6 +33,7 @@ import {
   Store,
   Info,
   Refrigerator,
+  ListTodo,
 } from 'lucide-react';
 
 interface ShoppingListViewProps {
@@ -49,6 +52,8 @@ interface ShoppingListViewProps {
   onRegenerateFromMenu: () => void;
   pantry: PantryItem[];
   onTogglePantryItem: (id: string) => void;
+  remindersConfig?: AppleRemindersConfig | null;
+  onSaveRemindersConfig?: (config: AppleRemindersConfig | null) => void;
 }
 
 export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
@@ -61,9 +66,12 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   onRegenerateFromMenu,
   pantry,
   onTogglePantryItem,
+  remindersConfig = null,
+  onSaveRemindersConfig = () => {},
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<ShoppingPeriod>('all');
   const [storeMode, setStoreMode] = useState(false);
+  const [isRemindersModalOpen, setIsRemindersModalOpen] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customQty, setCustomQty] = useState<string>('');
   const [customUnit, setCustomUnit] = useState('');
@@ -182,6 +190,18 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
             >
               <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
               <span>Sincronizar menú</span>
+            </button>
+
+            <button
+              onClick={() => setIsRemindersModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold text-white bg-indigo-500/30 hover:bg-indigo-500/40 border border-indigo-300/30 rounded-xl transition-all shadow-xs backdrop-blur-sm relative"
+              title="Sincronizar con Recordatorios de Apple (iCloud)"
+            >
+              <ListTodo className="w-3.5 h-3.5 text-indigo-300" />
+              <span>Recordatorios</span>
+              {remindersConfig?.appleId && (
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Conectado a iCloud" />
+              )}
             </button>
 
             <button
@@ -544,6 +564,18 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
           })}
         </div>
       )}
+
+      {/* Modal de Configuración y Sincronización con Recordatorios de Apple */}
+      <AppleRemindersModal
+        isOpen={isRemindersModalOpen}
+        onClose={() => setIsRemindersModalOpen(false)}
+        items={items}
+        currentPeriod={selectedPeriod}
+        initialConfig={remindersConfig}
+        onSaveConfig={(config) => {
+          onSaveRemindersConfig(config);
+        }}
+      />
     </div>
   );
 };

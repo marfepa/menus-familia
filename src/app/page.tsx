@@ -13,6 +13,7 @@ import {
   ExcludedFoodItem,
   GenerateMode,
   SyncStatusState,
+  AppleRemindersConfig,
 } from '@/types';
 import { Storage } from '@/lib/storage';
 import { syncManager } from '@/lib/syncManager';
@@ -44,6 +45,7 @@ export default function Home() {
   const [settings, setSettings] = useState<AppSettings>({ householdServings: 4, generateMode: 'full' });
   const [pantry, setPantry] = useState<DynamicPantryItem[]>([]);
   const [excludedFoods, setExcludedFoods] = useState<ExcludedFoodItem[]>([]);
+  const [remindersConfig, setRemindersConfig] = useState<AppleRemindersConfig | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatusState>('synced');
   const [isMounted, setIsMounted] = useState(false);
@@ -66,6 +68,8 @@ export default function Home() {
       setPantry(loadedPantry);
       const loadedExcluded = Storage.getExcludedFoods() || [];
       setExcludedFoods(loadedExcluded);
+      const loadedReminders = Storage.getAppleRemindersConfig();
+      setRemindersConfig(loadedReminders);
 
       const loadedPlan = Storage.getPlanForWeek(currentWeekStartDate);
       setWeeklyPlan(loadedPlan);
@@ -353,6 +357,11 @@ export default function Home() {
     persistPlan(weeklyPlan, recipes, settings, pantry, excludedFoods);
   };
 
+  const handleSaveRemindersConfig = (config: AppleRemindersConfig | null) => {
+    setRemindersConfig(config);
+    Storage.saveAppleRemindersConfig(config);
+  };
+
   // Gestión de Alimentos Vetados
   const handleAddExcludedFood = (item: ExcludedFoodItem) => {
     const next = [item, ...excludedFoods];
@@ -476,6 +485,8 @@ export default function Home() {
             onRegenerateFromMenu={handleRegenerateShoppingFromMenu}
             pantry={pantry}
             onTogglePantryItem={handleTogglePantryItem}
+            remindersConfig={remindersConfig}
+            onSaveRemindersConfig={handleSaveRemindersConfig}
           />
         )}
 

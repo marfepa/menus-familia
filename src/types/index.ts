@@ -314,4 +314,31 @@ export interface CloudStoreStatus {
   message?: string;
 }
 
+export interface AppleRemindersConfig {
+  appleId: string;
+  appSpecificPassword: string;
+  calendarHref?: string;
+  calendarName?: string;
+  autoSyncOnCheck?: boolean;
+  syncPeriod?: ShoppingPeriod;
+  lastSyncedAt?: string;
+}
+
+export interface AppleRemindersListInfo {
+  id: string;
+  href: string;
+  name: string;
+  color?: string;
+  isDefault?: boolean;
+}
+
+export interface RemindersSyncResult {
+  success: boolean;
+  syncedCount: number;
+  totalCount: number;
+  listName: string;
+  timestamp: string;
+  error?: string;
+}
+
 

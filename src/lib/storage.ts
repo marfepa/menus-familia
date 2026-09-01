@@ -1,4 +1,13 @@
-import type { Recipe, WeeklyPlan, ShoppingItem, AppSettings, PantryItem, ExcludedFoodItem, FamilySyncPayload } from '@/types';
+import type {
+  Recipe,
+  WeeklyPlan,
+  ShoppingItem,
+  AppSettings,
+  PantryItem,
+  ExcludedFoodItem,
+  FamilySyncPayload,
+  AppleRemindersConfig,
+} from '@/types';
 
 import { INITIAL_RECIPES } from '@/data/initialRecipes';
 import { DEFAULT_PANTRY, DEFAULT_SETTINGS } from '@/data/defaultPantry';
@@ -11,6 +20,7 @@ const STORAGE_KEYS = {
   SETTINGS: 'recetario_familia_settings_v4',
   PANTRY: 'recetario_familia_pantry_v5',
   EXCLUDED_FOODS: 'recetario_familia_excluded_foods_v1',
+  REMINDERS: 'recetario_familia_reminders_config_v1',
   LAST_UPDATE: 'recetario_familia_last_update_v1',
   DEVICE_ID: 'recetario_familia_device_id_v1',
 };
@@ -217,6 +227,18 @@ export const Storage = {
 
   saveExcludedFoods(items: ExcludedFoodItem[]): void {
     writeJson(STORAGE_KEYS.EXCLUDED_FOODS, items);
+  },
+
+  getAppleRemindersConfig(): AppleRemindersConfig | null {
+    return readJson<AppleRemindersConfig | null>(STORAGE_KEYS.REMINDERS, null);
+  },
+
+  saveAppleRemindersConfig(config: AppleRemindersConfig | null): void {
+    if (!config) {
+      if (canUseStorage()) localStorage.removeItem(STORAGE_KEYS.REMINDERS);
+      return;
+    }
+    writeJson(STORAGE_KEYS.REMINDERS, config);
   },
 
   exportBackup(): string {
