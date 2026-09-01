@@ -570,11 +570,6 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
         isOpen={isRemindersModalOpen}
         onClose={() => setIsRemindersModalOpen(false)}
         items={items}
-        currentPeriod={selectedPeriod}
-        initialConfig={remindersConfig}
-        onSaveConfig={(config) => {
-          onSaveRemindersConfig(config);
-        }}
       />
     </div>
   );

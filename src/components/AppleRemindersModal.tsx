@@ -1,446 +1,284 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import {
-  AppleRemindersConfig,
-  AppleRemindersListInfo,
-  ShoppingItem,
-  ShoppingPeriod,
-} from '@/types';
+import React, { useState } from 'react';
 import {
   X,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  ListTodo,
-  ExternalLink,
-  ShieldCheck,
-  RefreshCw,
-  Key,
-  Mail,
-  ListFilter,
   Check,
-  Trash2,
+  Copy,
+  ExternalLink,
+  Download,
   Sparkles,
+  Smartphone,
+  Info,
+  CheckCircle2,
+  ArrowRight,
+  ListTodo
 } from 'lucide-react';
+import type { ShoppingItem } from '@/types';
+import {
+  formatRemindersPlainText,
+  buildShortcutsUrl,
+  generateRemindersIcsFile,
+} from '@/lib/reminders/shortcutsFormatter';
 
 interface AppleRemindersModalProps {
   isOpen: boolean;
   onClose: () => void;
   items: ShoppingItem[];
-  currentPeriod: ShoppingPeriod;
-  initialConfig: AppleRemindersConfig | null;
-  onSaveConfig: (config: AppleRemindersConfig | null) => void;
 }
 
 export const AppleRemindersModal: React.FC<AppleRemindersModalProps> = ({
   isOpen,
   onClose,
   items,
-  currentPeriod,
-  initialConfig,
-  onSaveConfig,
 }) => {
-  const [appleId, setAppleId] = useState(initialConfig?.appleId || '');
-  const [appSpecificPassword, setAppSpecificPassword] = useState(
-    initialConfig?.appSpecificPassword || ''
-  );
-  const [selectedHref, setSelectedHref] = useState<string>(
-    initialConfig?.calendarHref || ''
-  );
-  const [selectedName, setSelectedName] = useState<string>(
-    initialConfig?.calendarName || ''
-  );
-  const [availableLists, setAvailableLists] = useState<AppleRemindersListInfo[]>([]);
-  const [syncPeriod, setSyncPeriod] = useState<ShoppingPeriod>(
-    initialConfig?.syncPeriod || currentPeriod || 'all'
-  );
-  const [onlyUnchecked, setOnlyUnchecked] = useState(false);
-
-  // Estados de carga y mensajes
-  const [testingConnection, setTestingConnection] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [isConfigured, setIsConfigured] = useState(Boolean(initialConfig?.appleId));
-
-  useEffect(() => {
-    if (initialConfig) {
-      setAppleId(initialConfig.appleId);
-      setAppSpecificPassword(initialConfig.appSpecificPassword);
-      setSelectedHref(initialConfig.calendarHref || '');
-      setSelectedName(initialConfig.calendarName || '');
-      setSyncPeriod(initialConfig.syncPeriod || currentPeriod || 'all');
-      setIsConfigured(Boolean(initialConfig.appleId && initialConfig.appSpecificPassword));
-    }
-  }, [initialConfig, currentPeriod]);
+  const [onlyUnchecked, setOnlyUnchecked] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<'copy' | 'shortcut' | 'ics'>('copy');
 
   if (!isOpen) return null;
 
-  // Filtrar los items a sincronizar según el periodo y el check
-  const itemsToSync = items.filter((item) => {
-    if (syncPeriod !== 'all' && !item.isCustom) {
-      if (item.period !== syncPeriod && item.period !== 'both') return false;
-    }
-    if (onlyUnchecked && item.checked) return false;
-    return true;
-  });
+  const targetItems = onlyUnchecked ? items.filter((it) => !it.checked) : items;
+  const plainText = formatRemindersPlainText(items, onlyUnchecked);
 
-  const handleTestAndDiscover = async () => {
-    if (!appleId.trim() || !appSpecificPassword.trim()) {
-      setErrorMessage('Introduce tu Apple ID y la contraseña de aplicación.');
-      return;
-    }
-
-    setTestingConnection(true);
-    setErrorMessage(null);
-    setSuccessMessage(null);
-
+  const handleCopy = async () => {
     try {
-      const res = await fetch('/api/reminders/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          appleId: appleId.trim(),
-          appSpecificPassword: appSpecificPassword.trim(),
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error al conectar con iCloud');
-      }
-
-      setAvailableLists(data.lists || []);
-      if (data.lists && data.lists.length > 0) {
-        // Seleccionar por defecto la primera lista (o la predeterminada)
-        const def = data.lists.find((l: AppleRemindersListInfo) => l.isDefault) || data.lists[0];
-        setSelectedHref(def.href);
-        setSelectedName(def.name);
-        setSuccessMessage(`¡Conexión exitosa! Se encontraron ${data.lists.length} listas en tu Recordatorios.`);
-        setIsConfigured(true);
-      } else {
-        setErrorMessage('Se conectó con iCloud pero no se encontraron listas de Recordatorios.');
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'No se pudo conectar con Apple iCloud.');
-    } finally {
-      setTestingConnection(false);
+      await navigator.clipboard.writeText(plainText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Fallback
+      const textarea = document.createElement('textarea');
+      textarea.value = plainText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
     }
   };
 
-  const handleSyncNow = async () => {
-    if (!appleId.trim() || !appSpecificPassword.trim() || !selectedHref) {
-      setErrorMessage('Completa la configuración y selecciona una lista primero.');
-      return;
-    }
-
-    if (itemsToSync.length === 0) {
-      setErrorMessage('No hay productos que coincidan con el filtro seleccionado para sincronizar.');
-      return;
-    }
-
-    setSyncing(true);
-    setErrorMessage(null);
-    setSuccessMessage(null);
-
-    try {
-      const res = await fetch('/api/reminders/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          appleId: appleId.trim(),
-          appSpecificPassword: appSpecificPassword.trim(),
-          calendarHref: selectedHref,
-          items: itemsToSync,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error durante la sincronización');
-      }
-
-      const result = data.result;
-      const count = result?.syncedCount || itemsToSync.length;
-      const nowStr = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-
-      setSuccessMessage(`✅ ¡${count} artículos cargados con éxito en «${selectedName || 'Recordatorios'}» a las ${nowStr}!`);
-
-      // Guardar configuración
-      const newConfig: AppleRemindersConfig = {
-        appleId: appleId.trim(),
-        appSpecificPassword: appSpecificPassword.trim(),
-        calendarHref: selectedHref,
-        calendarName: selectedName,
-        syncPeriod,
-        lastSyncedAt: new Date().toISOString(),
-      };
-      onSaveConfig(newConfig);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Error al sincronizar con Recordatorios de Apple');
-    } finally {
-      setSyncing(false);
-    }
+  const handleOpenShortcut = () => {
+    const url = buildShortcutsUrl('Menús a Recordatorios', items, onlyUnchecked);
+    window.location.href = url;
   };
 
-  const handleDisconnect = () => {
-    onSaveConfig(null);
-    setAppleId('');
-    setAppSpecificPassword('');
-    setSelectedHref('');
-    setSelectedName('');
-    setAvailableLists([]);
-    setIsConfigured(false);
-    setSuccessMessage('Configuración de Recordatorios de Apple eliminada de este navegador.');
+  const handleDownloadIcs = () => {
+    const icsContent = generateRemindersIcsFile(items, onlyUnchecked);
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `compra-recordatorios-${new Date().toISOString().slice(0, 10)}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 my-8">
-        {/* Cabecera */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Header con estilo Apple */}
+        <div className="p-5 sm:p-6 bg-linear-to-r from-slate-900 via-slate-800 to-indigo-950 text-white relative flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-500 flex items-center justify-center text-white shadow-md">
-              <ListTodo className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20">
+              <ListTodo className="w-5 h-5 text-amber-300" />
             </div>
             <div>
-              <h2 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
-                <span>Recordatorios de Apple</span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                  iCloud CalDAV
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-black text-white">Recordatorios de Apple</h2>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-white/20 text-indigo-100">
+                  iOS · Mac
                 </span>
-              </h2>
-              <p className="text-xs text-slate-500">
-                Sincronización en segundo plano con tu iPhone, Apple Watch y Mac
+              </div>
+              <p className="text-xs text-slate-300">
+                Pasa tu lista de la compra ({targetItems.length} productos) a la app oficial de Apple
               </p>
             </div>
           </div>
-
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all"
+            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Guía rápida de Contraseña de Aplicación */}
-        <div className="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs space-y-2">
-          <div className="flex items-center justify-between font-bold text-slate-800">
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              ¿Cómo obtener la contraseña de aplicación?
-            </span>
-            <a
-              href="https://appleid.apple.com/account/manage"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 hover:underline font-semibold"
-            >
-              <span>appleid.apple.com</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-          <p className="text-slate-600 leading-relaxed">
-            Apple no permite usar tu contraseña habitual. Debes generar una contraseña específica (100% segura y revocable cuando quieras):
-          </p>
-          <ol className="list-decimal list-inside text-slate-600 space-y-1 pl-1">
-            <li>Entra en <strong>appleid.apple.com</strong> o en tu iPhone en <em>Ajustes &gt; [Tu Nombre] &gt; Inicio de sesión y seguridad</em>.</li>
-            <li>Selecciona <strong>Contraseñas de aplicaciones</strong> y pulsa <strong>Generar</strong>.</li>
-            <li>Escribe de etiqueta <em>Menús Familia</em> y copia el código generado (ej. <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-mono text-[11px]">abcd-efgh-ijkl-mnop</code>).</li>
-          </ol>
+        {/* Filtro rápido */}
+        <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs">
+          <label className="flex items-center gap-2 cursor-pointer select-none text-slate-700 font-semibold">
+            <input
+              type="checkbox"
+              checked={onlyUnchecked}
+              onChange={(e) => setOnlyUnchecked(e.target.checked)}
+              className="rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+            />
+            <span>Solo artículos pendientes ({items.filter((it) => !it.checked).length})</span>
+          </label>
+          <span className="text-slate-400 text-[11px]">Total: {targetItems.length} items</span>
         </div>
 
-        {/* Formulario de Credenciales */}
-        <div className="mt-5 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                <Mail className="w-3.5 h-3.5 text-slate-400" />
-                <span>Apple ID (Correo iCloud)</span>
-              </label>
-              <input
-                type="email"
-                placeholder="ejemplo@icloud.com"
-                value={appleId}
-                onChange={(e) => setAppleId(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
-              />
-            </div>
+        {/* Tabs de métodos */}
+        <div className="flex border-b border-slate-200 bg-slate-100/60 p-1.5 gap-1.5 mx-6 mt-4 rounded-xl">
+          <button
+            onClick={() => setActiveTab('copy')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'copy'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Copy className="w-3.5 h-3.5 text-indigo-600" />
+            <span>1-Clic Portapapeles</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('shortcut')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'shortcut'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>Atajo de Apple</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('ics')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'ics'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Archivo .ICS</span>
+          </button>
+        </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <Key className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Contraseña de App</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-[11px] text-slate-400 hover:text-slate-600 underline font-normal"
-                >
-                  {showPassword ? 'Ocultar' : 'Ver'}
-                </button>
-              </label>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="xxxx-xxxx-xxxx-xxxx"
-                value={appSpecificPassword}
-                onChange={(e) => setAppSpecificPassword(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono font-medium"
-              />
-            </div>
-          </div>
+        {/* Contenido de Tabs */}
+        <div className="p-6 overflow-y-auto flex-1 space-y-4">
+          {activeTab === 'copy' && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-indigo-50/80 border border-indigo-100 text-indigo-950 space-y-2">
+                <div className="flex items-center gap-2 font-bold text-xs text-indigo-900">
+                  <Smartphone className="w-4 h-4 text-indigo-600" />
+                  <span>El truco nativo más rápido de Apple:</span>
+                </div>
+                <ol className="text-xs text-indigo-900/90 space-y-1 pl-4 list-decimal">
+                  <li>Pulsa el botón <strong>«Copiar lista para Recordatorios»</strong> de abajo.</li>
+                  <li>Abre la app <strong>Recordatorios</strong> en tu iPhone, iPad o Mac.</li>
+                  <li>Entra en tu lista (ej. <em>«Comestibles»</em>) y pulsa en una línea vacía.</li>
+                  <li>Pulsa <strong>Pegar</strong>. ¡Apple convertirá cada línea en un recordatorio individual automáticamente!</li>
+                </ol>
+              </div>
 
-          {/* Botón de probar conexión y detectar listas */}
-          <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={handleTestAndDiscover}
-              disabled={testingConnection || !appleId || !appSpecificPassword}
-              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-2"
-            >
-              {testingConnection ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
-                  <span>Conectando con iCloud...</span>
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 text-indigo-300" />
-                  <span>Probar y detectar listas</span>
-                </>
-              )}
-            </button>
-
-            {isConfigured && (
+              {/* Botón principal Copiar */}
               <button
-                type="button"
-                onClick={handleDisconnect}
-                className="text-xs text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1 font-semibold"
+                onClick={handleCopy}
+                className="w-full py-3.5 px-4 rounded-2xl font-black text-sm bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 active:scale-98"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Desconectar cuenta</span>
+                {copied ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                    <span>¡Lista copiada al portapapeles!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    <span>Copiar lista para Recordatorios ({targetItems.length} items)</span>
+                  </>
+                )}
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Selector de lista si hay listas detectadas */}
-          {availableLists.length > 0 && (
-            <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-2">
-              <label className="block text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                <ListFilter className="w-4 h-4 text-indigo-600" />
-                <span>Lista de Recordatorios de destino en tu iPhone/Mac:</span>
-              </label>
+          {activeTab === 'shortcut' && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-950 space-y-2">
+                <div className="flex items-center gap-2 font-bold text-xs text-amber-900">
+                  <Sparkles className="w-4 h-4 text-amber-600" />
+                  <span>Automatización con la app Atajos:</span>
+                </div>
+                <p className="text-xs text-amber-900/90 leading-relaxed">
+                  Si tienes un atajo llamado <strong>«Menús a Recordatorios»</strong> en tu iPhone o Mac, este botón lo ejecutará enviándole la lista completa al instante.
+                </p>
+              </div>
 
-              <select
-                value={selectedHref}
-                onChange={(e) => {
-                  const href = e.target.value;
-                  setSelectedHref(href);
-                  const found = availableLists.find((l) => l.href === href);
-                  if (found) setSelectedName(found.name);
-                }}
-                className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border border-indigo-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500/20"
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+                <p className="font-bold text-slate-700 flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Cómo crear el atajo en 1 minuto en tu iPhone/Mac:</span>
+                </p>
+                <div className="text-[11px] text-slate-600 space-y-1 font-mono bg-white p-2.5 rounded-xl border border-slate-200">
+                  <p>1. Acción: <strong>Dividir texto [Entrada del atajo] por saltos de línea</strong></p>
+                  <p>2. Acción: <strong>Repetir con cada elemento</strong></p>
+                  <p>3. Acción: <strong>Añadir nuevo recordatorio [Elemento del elemento repetido] a la lista [Comestibles]</strong></p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleOpenShortcut}
+                className="w-full py-3.5 px-4 rounded-2xl font-black text-sm bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-orange-200 transition-all flex items-center justify-center gap-2 active:scale-98"
               >
-                {availableLists.map((list) => (
-                  <option key={list.href} value={list.href}>
-                    {list.isDefault ? '⭐ ' : '📋 '} {list.name}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-indigo-700 font-medium">
-                💡 Consejo: Si en Recordatorios creas una lista llamada <strong>Compra</strong> de tipo &ldquo;Compras&rdquo; (iOS 17+), Apple clasificará los productos automáticamente por pasillos.
-              </p>
+                <ExternalLink className="w-4 h-4" />
+                <span>Ejecutar Atajo «Menús a Recordatorios»</span>
+              </button>
             </div>
           )}
 
-          {/* Opciones de Sincronización */}
-          <div className="pt-2 border-t border-slate-100 space-y-3">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-              Opciones de sincronización
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  Tramo a sincronizar:
-                </label>
-                <select
-                  value={syncPeriod}
-                  onChange={(e) => setSyncPeriod(e.target.value as ShoppingPeriod)}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium"
-                >
-                  <option value="all">Semana Completa</option>
-                  <option value="weekday">L-V Mediodía (Tuppers)</option>
-                  <option value="weekend">Fin de Semana</option>
-                </select>
+          {activeTab === 'ics' && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-950 space-y-2">
+                <div className="flex items-center gap-2 font-bold text-xs text-emerald-900">
+                  <Download className="w-4 h-4 text-emerald-600" />
+                  <span>Descarga directa de archivo de tareas (.ics):</span>
+                </div>
+                <p className="text-xs text-emerald-900/90 leading-relaxed">
+                  Descarga un archivo con formato estándar de tareas (VTODO). Al abrirlo en tu Mac, se añadirán directamente a tu lista de Recordatorios de Apple.
+                </p>
               </div>
 
-              <div className="flex items-center">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 mt-4 sm:mt-0">
-                  <input
-                    type="checkbox"
-                    checked={onlyUnchecked}
-                    onChange={(e) => setOnlyUnchecked(e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
-                  />
-                  <span>Omitir productos ya tachados</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Mensajes de Estado */}
-          {errorMessage && (
-            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <div className="flex-1 font-medium">{errorMessage}</div>
+              <button
+                onClick={handleDownloadIcs}
+                className="w-full py-3.5 px-4 rounded-2xl font-black text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200 transition-all flex items-center justify-center gap-2 active:scale-98"
+              >
+                <Download className="w-4 h-4" />
+                <span>Descargar archivo .ICS ({targetItems.length} tareas)</span>
+              </button>
             </div>
           )}
 
-          {successMessage && (
-            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-              <div className="flex-1 font-medium">{successMessage}</div>
-            </div>
-          )}
-
-          {/* Botón Principal de Sincronizar */}
-          <div className="pt-3">
-            <button
-              type="button"
-              onClick={handleSyncNow}
-              disabled={syncing || !appleId || !appSpecificPassword || (!selectedHref && availableLists.length === 0)}
-              className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-500 hover:to-purple-600 disabled:opacity-50 text-white rounded-2xl font-black text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
-            >
-              {syncing ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin text-white" />
-                  <span>Cargando {itemsToSync.length} artículos en Recordatorios...</span>
-                </>
+          {/* Vista previa de items */}
+          <div className="space-y-2 pt-2">
+            <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+              Vista previa del contenido a transferir:
+            </h4>
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 max-h-40 overflow-y-auto text-xs text-slate-700 space-y-1 font-mono">
+              {targetItems.length === 0 ? (
+                <p className="text-slate-400 italic">No hay productos seleccionados.</p>
               ) : (
-                <>
-                  <Sparkles className="w-4 h-4 text-amber-300" />
-                  <span>Sincronizar {itemsToSync.length} artículos en Recordatorios</span>
-                </>
+                plainText.split('\n').map((line, idx) => (
+                  <div key={idx} className="flex items-start gap-1.5">
+                    <span className="text-indigo-500 font-bold">•</span>
+                    <span>{line}</span>
+                  </div>
+                ))
               )}
-            </button>
+            </div>
           </div>
+        </div>
 
-          {initialConfig?.lastSyncedAt && (
-            <p className="text-center text-[11px] text-slate-400 font-medium">
-              Última sincronización con Apple:{' '}
-              {new Date(initialConfig.lastSyncedAt).toLocaleString('es-ES', {
-                dateStyle: 'short',
-                timeStyle: 'short',
-              })}
-            </p>
-          )}
+        {/* Footer */}
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+          <p className="text-[11px] text-slate-500">
+            Compatible con iPhone, iPad, Mac y Apple Watch
+          </p>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-200 transition-colors"
+          >
+            Cerrar
+          </button>
         </div>
       </div>
     </div>

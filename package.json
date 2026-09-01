@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --experimental-strip-types --import ./scripts/ts-alias.mjs --test src/lib/menuGenerator.test.ts src/lib/shoppingListGenerator.test.ts src/lib/pantryUtils.test.ts src/lib/utils.test.ts src/lib/syncManager.test.ts src/lib/reminders/icloudCalDav.test.ts"
+    "test": "node --experimental-strip-types --import ./scripts/ts-alias.mjs --test src/lib/menuGenerator.test.ts src/lib/shoppingListGenerator.test.ts src/lib/pantryUtils.test.ts src/lib/utils.test.ts src/lib/syncManager.test.ts src/lib/reminders/shortcutsFormatter.test.ts src/lib/reminders/icloudCalDav.test.ts"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
