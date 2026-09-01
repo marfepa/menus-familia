@@ -129,6 +129,9 @@ export function parseSingleReminderText(rawLine: string): ParsedReminderResult {
   // Eliminar prefijos comunes de viñetas o checkboxes
   text = text.replace(/^([•\-\*+]|\d+[\.\)]|\[[ xX]?\]|\([ xX]?\))\s*/, '').trim();
 
+  // Eliminar verbos comunes iniciales de dictado (ej: "Comprar 2 kg de tomates", "Traer leche", "Añadir pan")
+  text = text.replace(/^(comprar|traer|anadir|añadir|coger|llevar|pedir|hace\s+falta)\s+/i, '').trim();
+
   let notes: string | undefined;
 
   // Extraer notas si están separadas por ::: o — o |
@@ -241,47 +244,102 @@ export function parseSingleReminderText(rawLine: string): ParsedReminderResult {
   };
 }
 
+function extractTitleAndNotesFromObject(obj: Record<string, unknown>): { title: string; notes?: string } {
+  const titleKeys = ['title', 'name', 'text', 'summary', 'value', 'item', 'content', 'label'];
+  const noteKeys = ['notes', 'note', 'description', 'body', 'details'];
+
+  let title = '';
+  let notes: string | undefined;
+
+  for (const [key, val] of Object.entries(obj)) {
+    const k = key.toLowerCase().trim();
+    if (!title && titleKeys.includes(k) && typeof val === 'string' && val.trim()) {
+      title = val.trim();
+    }
+    if (!notes && noteKeys.includes(k) && typeof val === 'string' && val.trim()) {
+      notes = val.trim();
+    }
+  }
+
+  if (!title) {
+    for (const val of Object.values(obj)) {
+      if (typeof val === 'string' && val.trim()) {
+        title = val.trim();
+        break;
+      }
+    }
+  }
+
+  return { title, notes };
+}
+
 /**
  * Parsea un payload flexible recibido de Atajos de Apple / Siri / Webhook.
  */
 export function parseRemindersPayload(payload: unknown): ShoppingItem[] {
   if (!payload) return [];
 
+  // Si llega como string pero contiene JSON (ej. array o diccionario serializado)
+  if (typeof payload === 'string') {
+    const trimmed = payload.trim();
+    if (
+      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+      (trimmed.startsWith('[') && trimmed.endsWith(']'))
+    ) {
+      try {
+        const parsedJson = JSON.parse(trimmed);
+        return parseRemindersPayload(parsedJson);
+      } catch {
+        // Continuar como texto plano si falla JSON.parse
+      }
+    }
+    const rawLines = trimmed.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    return buildShoppingItemsFromLines(rawLines);
+  }
+
   const rawLines: string[] = [];
 
-  if (typeof payload === 'string') {
-    rawLines.push(...payload.split(/\r?\n/).map((s) => s.trim()).filter(Boolean));
-  } else if (Array.isArray(payload)) {
+  if (Array.isArray(payload)) {
     for (const item of payload) {
       if (typeof item === 'string') {
         rawLines.push(...item.split(/\r?\n/).map((s) => s.trim()).filter(Boolean));
       } else if (item && typeof item === 'object') {
-        const title = (item as any).title || (item as any).name || (item as any).text || '';
-        const notes = (item as any).notes || (item as any).note || '';
+        const { title, notes } = extractTitleAndNotesFromObject(item as Record<string, unknown>);
         if (title) {
-          rawLines.push(notes ? `${title} — ${notes}` : String(title));
+          rawLines.push(notes ? `${title} — ${notes}` : title);
         }
       }
     }
-  } else if (typeof payload === 'object' && payload !== null) {
+    return buildShoppingItemsFromLines(rawLines);
+  }
+
+  if (typeof payload === 'object' && payload !== null) {
     const obj = payload as Record<string, unknown>;
-    if (Array.isArray(obj.items)) {
-      return parseRemindersPayload(obj.items);
+
+    // Buscar campos contenedores independientemente de mayúsculas/minúsculas
+    for (const [key, val] of Object.entries(obj)) {
+      const k = key.toLowerCase().trim();
+      if (
+        ['items', 'reminders', 'recordatorios', 'list', 'lista', 'data', 'productos', 'ingredients'].includes(k)
+      ) {
+        return parseRemindersPayload(val);
+      }
+      if (['text', 'texto', 'input', 'body'].includes(k) && typeof val === 'string') {
+        return parseRemindersPayload(val);
+      }
     }
-    if (Array.isArray(obj.reminders)) {
-      return parseRemindersPayload(obj.reminders);
-    }
-    if (typeof obj.text === 'string') {
-      return parseRemindersPayload(obj.text);
-    }
-    if (typeof obj.input === 'string') {
-      return parseRemindersPayload(obj.input);
-    }
-    if (typeof obj.name === 'string') {
-      return parseRemindersPayload([obj.name]);
+
+    // Si es un único objeto de recordatorio { Title: "..." }
+    const { title, notes } = extractTitleAndNotesFromObject(obj);
+    if (title) {
+      return buildShoppingItemsFromLines([notes ? `${title} — ${notes}` : title]);
     }
   }
 
+  return [];
+}
+
+function buildShoppingItemsFromLines(rawLines: string[]): ShoppingItem[] {
   const items: ShoppingItem[] = [];
   const now = Date.now();
 

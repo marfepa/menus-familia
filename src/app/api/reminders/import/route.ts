@@ -27,7 +27,8 @@ export async function GET() {
     acceptedFormats: [
       'Texto plano multilínea con "Content-Type: text/plain"',
       'Array JSON: ["2 kg de patatas", "1 docena de huevos", "Pechuga de pollo"]',
-      'Objeto JSON: { "items": ["Leche", "Arroz"] } o { "reminders": [...] }',
+      'Array de objetos Apple: [{ "Title": "Leche", "Notes": "Desnatada" }]',
+      'Objeto JSON: { "items": ["Leche", "Arroz"] } o { "reminders": [...] } o { "Reminders": [...] }',
       'Objeto JSON con semana opcional: { "weekStartDate": "YYYY-MM-DD", "items": [...] }',
     ],
   });
@@ -44,14 +45,24 @@ export async function POST(request: Request) {
     let targetWeek: string | undefined;
 
     if (contentType.includes('application/json')) {
-      body = await request.json();
-      if (body && typeof body === 'object' && body.weekStartDate) {
-        targetWeek = String(body.weekStartDate);
+      try {
+        body = await request.json();
+      } catch {
+        body = await request.text();
       }
     } else {
-      // Texto plano (ej. enviado directamente como cuerpo de texto desde Atajos)
       const rawText = await request.text();
-      body = rawText;
+      try {
+        body = JSON.parse(rawText);
+      } catch {
+        body = rawText;
+      }
+    }
+
+    if (body && typeof body === 'object' && !Array.isArray(body)) {
+      if (body.weekStartDate || body.week || body.semana) {
+        targetWeek = String(body.weekStartDate || body.week || body.semana);
+      }
     }
 
     // Si viene la semana por query param ?week=YYYY-MM-DD

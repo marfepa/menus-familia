@@ -9,7 +9,7 @@ import {
 import type { ShoppingItem } from '@/types';
 
 describe('reminderImporter', () => {
-  it('inferCategory asigna pasillos correctamente', () => {
+  it('inferCategory asigna pasillos correctamente y asigna otros por defecto', () => {
     assert.strictEqual(inferCategory('Salmón noruego fresco'), 'pescaderia');
     assert.strictEqual(inferCategory('Merluza congelada'), 'pescaderia');
     assert.strictEqual(inferCategory('Pechuga de pollo fileteada'), 'carniceria');
@@ -24,6 +24,8 @@ describe('reminderImporter', () => {
     assert.strictEqual(inferCategory('Aceite de oliva virgen extra'), 'despensa');
     assert.strictEqual(inferCategory('Papel higiénico'), 'otros');
     assert.strictEqual(inferCategory('Detergente para lavadora'), 'otros');
+    // Objeto desconocido nunca da error, se va a otros
+    assert.strictEqual(inferCategory('Articulo Inventado Desconocido 123'), 'otros');
   });
 
   it('parseSingleReminderText extrae cantidades, unidades y formatos', () => {
@@ -57,40 +59,47 @@ describe('reminderImporter', () => {
     assert.strictEqual(p4.category, 'lacteos');
   });
 
-  it('parseRemindersPayload procesa texto y arrays de forma robusta', () => {
-    // Multilínea string
-    const textPayload = `
-      1 kg de manzanas
-      2 brik de leche
-      Pechuga de pollo
-    `;
-    const items = parseRemindersPayload(textPayload);
+  it('parseRemindersPayload procesa objetos nativos de Apple Shortcuts (Title, Notes, etc.)', () => {
+    // Objeto serializado directamente por Apple Shortcuts con mayúsculas
+    const appleShortcutsPayload = [
+      { Title: 'Comprar 2 kg de tomates', Notes: 'Frutería' },
+      { Title: 'Leche entera', Notes: 'Lácteos' },
+      { Name: 'Pechuga de pollo' },
+    ];
+    const items = parseRemindersPayload(appleShortcutsPayload);
     assert.strictEqual(items.length, 3);
-    assert.strictEqual(items[0].name, 'Manzanas');
-    assert.strictEqual(items[0].quantity, 1);
+    assert.strictEqual(items[0].name, 'Tomates');
+    assert.strictEqual(items[0].quantity, 2);
     assert.strictEqual(items[0].unit, 'kg');
     assert.strictEqual(items[0].category, 'fruteria');
-    assert.strictEqual(items[0].checked, false);
+    assert.strictEqual(items[0].storeTip, 'Frutería');
 
-    assert.strictEqual(items[1].name, 'Leche');
+    assert.strictEqual(items[1].name, 'Leche entera');
     assert.strictEqual(items[1].category, 'lacteos');
 
     assert.strictEqual(items[2].name, 'Pechuga de pollo');
     assert.strictEqual(items[2].category, 'carniceria');
 
-    // Array de objetos
-    const objPayload = [
-      { title: 'Papel de cocina', notes: 'Droguería' },
-      { name: '500g de carne picada' },
-    ];
-    const items2 = parseRemindersPayload(objPayload);
+    // Diccionario con clave "Reminders" o "Items"
+    const wrappedPayload = {
+      Reminders: [
+        { Title: 'Papel higiénico' },
+        { Title: 'Arroz' },
+      ],
+    };
+    const items2 = parseRemindersPayload(wrappedPayload);
     assert.strictEqual(items2.length, 2);
-    assert.strictEqual(items2[0].name, 'Papel de cocina');
+    assert.strictEqual(items2[0].name, 'Papel higiénico');
     assert.strictEqual(items2[0].category, 'otros');
-    assert.strictEqual(items2[0].storeTip, 'Droguería');
-    assert.strictEqual(items2[1].name, 'Carne picada');
-    assert.strictEqual(items2[1].quantity, 500);
-    assert.strictEqual(items2[1].unit, 'g');
+    assert.strictEqual(items2[1].name, 'Arroz');
+    assert.strictEqual(items2[1].category, 'despensa');
+
+    // String JSON serializado
+    const jsonStringPayload = JSON.stringify([{ Title: 'Manzanas' }]);
+    const items3 = parseRemindersPayload(jsonStringPayload);
+    assert.strictEqual(items3.length, 1);
+    assert.strictEqual(items3[0].name, 'Manzanas');
+    assert.strictEqual(items3[0].category, 'fruteria');
   });
 
   it('mergeImportedItemsIntoShoppingList combina y reactiva productos', () => {
