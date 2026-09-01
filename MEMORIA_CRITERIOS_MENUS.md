@@ -16,11 +16,12 @@ Este documento sirve como **registro vivo y manual operativo** para diseñar los
 
 ---
 
-### 2. 🌾 Gluten Moderado / Controlado & Pasta hasta 3 días/semana (L-V)
+### 2. 🌾 Gluten Moderado / Controlado & Pasta hasta 3 días/semana (Solo Comidas L-V)
 - **Objetivo**: Digestiones ligeras sin restricción total a cero: cantidad de gluten semanal baja/moderada, evitando ultraprocesados y bollería pesada de trigo pero permitiendo pasta de calidad en raciones controladas.
-- **Pauta de pasta**: Hasta un máximo de 3 comidas/cenas de pasta por semana, concentradas preferentemente de lunes a viernes (almuerzos de tupper para la oficina y cenas familiares rápidas).
+- **Pauta de pasta**: Hasta un máximo de 3 raciones de pasta por semana, concentradas **exclusivamente en comidas y tuppers de mediodía de lunes a viernes**.
+- **Cero pasta en las cenas**: Las cenas son siempre ligeras y proteicas (carnes magras, pescados, huevos, cremas suaves, Air-Fryer o tacos/fajitas de maíz).
 - **Fuentes de carbohidratos prioritarias**:
-  - **Pasta de trigo limpia ($\le 3$ días/semana)**: Macarrones, espirales, lazos o tallarines combinados siempre con verduras trituradas/fáciles y proteínas magras (boloñesa casera, pollo al limón, atún/huevo, gambas).
+  - **Pasta de trigo limpia (Solo comidas L-V, $\le 3$ días/semana)**: Macarrones, espirales, lazos o tallarines combinados siempre con verduras trituradas/fáciles y proteínas magras (boloñesa casera, pollo al limón, atún/huevo, gambas).
   - **Patata y boniato / batata**: Asadas en dados, al vapor en microondas (6 min) o en puré casero.
   - **Arroz**: Arroz jazmín, basmati o bomba.
   - **Quinoa y maíz**: Ensaladas templadas, tortillas 100% de maíz para fajitas/tacos.
@@ -120,5 +121,10 @@ Este documento sirve como **registro vivo y manual operativo** para diseñar los
     - *Ensalada Templada de Pasta con Atún Claro, Huevo Duro, Aguacate y Cherries* (`rec-32`, 12 min).
     - *Tallarines Salteados con Gambas al Ajillo y Pimiento en Tiras* (`rec-33`, 15 min).
   - **Estandarización de compra**: Formato lineal de supermercado de 500g para pastas y fondo de despensa.
+
+- **01/09/2026 (garantía de cenas 100% libres de pasta y ligeras en proteína)**:
+  - **Bloqueo duro de pasta en cenas**: Las recetas de pasta (`rec-30` a `rec-33`) quedan configuradas con `mealType: 'lunch'` (exclusivas para comidas y tuppers de mediodía).
+  - **Generador blindado**: Filtro en `pickBestRecipe` y en `placeLeftovers` para asegurar que ninguna cena (fresca o de sobras) contenga pasta, reservando las cenas para platos ligeros con alta proteína limpia (pescados, carnes magras, huevos, tortillas, cremas suaves aterciopeladas y tacos de maíz).
+  - **Avisos inteligentes**: `analyzePlanWarnings` alerta de inmediato si alguna cena contiene pasta.
 
 

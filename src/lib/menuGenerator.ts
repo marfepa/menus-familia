@@ -177,6 +177,7 @@ export function analyzePlanWarnings(
   let leftoverCount = 0;
   let slowDinners = 0;
   let pastaMeals = 0;
+  let dinnerPastaMeals = 0;
   let nonPastaGlutenMeals = 0;
   let dinnersWithoutKids = 0;
   let dinnerCount = 0;
@@ -189,6 +190,9 @@ export function analyzePlanWarnings(
     if (getSlotKind(dinner) === 'leftover') leftoverCount += 1;
 
     const dinnerRecipe = dinner?.recipeId ? recipeMap.get(dinner.recipeId) : undefined;
+    if (dinnerRecipe && (getSlotKind(dinner) === 'recipe' || getSlotKind(dinner) === 'leftover')) {
+      if (isPastaRecipe(dinnerRecipe)) dinnerPastaMeals += 1;
+    }
     if (dinnerRecipe && getSlotKind(dinner) === 'recipe') {
       dinnerCount += 1;
       if (dinnerRecipe.prepTimeMinutes > 25) slowDinners += 1;
@@ -229,6 +233,9 @@ export function analyzePlanWarnings(
   }
   if (slowDinners > 0) {
     warnings.push(`${slowDinners} cena${slowDinners > 1 ? 's' : ''} supera(n) 25 min de preparación.`);
+  }
+  if (dinnerPastaMeals > 0) {
+    warnings.push(`${dinnerPastaMeals} cena${dinnerPastaMeals > 1 ? 's' : ''} contiene(n) pasta (las cenas deben ser ligeras y sin pasta).`);
   }
   if (pastaMeals > 3) {
     warnings.push(`${pastaMeals} platos de pasta superan la recomendación de máx. 3 raciones semanales.`);
@@ -339,6 +346,18 @@ export function generateSmartWeeklyPlanWithMeta(
       if (next.length > 0) available = next;
     };
 
+    if (ctx.isDinner) {
+      const nonPasta = available.filter((r) => !isPastaRecipe(r));
+      if (nonPasta.length > 0) {
+        available = nonPasta;
+      } else {
+        const poolNonPasta = pool.filter((r) => !isPastaRecipe(r));
+        if (poolNonPasta.length > 0) {
+          available = poolNonPasta;
+        }
+      }
+    }
+
     if (opts.glutenLight) {
       apply((r) => recipeIsGlutenLight(r) || (isPastaRecipe(r) && pastaCookedCount < opts.maxPastaMealsPerWeek));
     }
@@ -402,8 +421,8 @@ export function generateSmartWeeklyPlanWithMeta(
         if (isMeatRecipe(r)) weight += 5;
         if (isFishRecipe(r) && isPreferredFish(r)) weight += 1;
       }
-      if (isPastaRecipe(r) && ctx.dayIndex <= 4 && pastaCookedCount < opts.maxPastaMealsPerWeek) {
-        weight += 3; // Impulso para pasta entre semana (L-V)
+      if (isPastaRecipe(r) && !ctx.isDinner && ctx.dayIndex <= 4 && pastaCookedCount < opts.maxPastaMealsPerWeek) {
+        weight += 3; // Impulso para pasta entre semana en comidas (L-V)
       }
       if (opts.pantry && opts.pantry.length > 0) {
         const pantryScore = calculateRecipePantryScore(r, opts.pantry, weekStartDate);
@@ -425,7 +444,7 @@ export function generateSmartWeeklyPlanWithMeta(
 
       let placed = false;
       if (opts.mode === 'dinners') {
-        if (slotEmpty(targetDay, 'dinner')) {
+        if (slotEmpty(targetDay, 'dinner') && !isPastaRecipe(recipe)) {
           setSlot(targetDay, 'dinner', leftoverSlot(recipe, cookDay, cookMeal));
           placed = true;
         }
@@ -442,7 +461,7 @@ export function generateSmartWeeklyPlanWithMeta(
       } else if (targetDay <= 4 && slotEmpty(targetDay, 'lunch')) {
         setSlot(targetDay, 'lunch', leftoverSlot(recipe, cookDay, cookMeal));
         placed = true;
-      } else if (slotEmpty(targetDay, 'dinner')) {
+      } else if (slotEmpty(targetDay, 'dinner') && !isPastaRecipe(recipe)) {
         setSlot(targetDay, 'dinner', leftoverSlot(recipe, cookDay, cookMeal));
         placed = true;
       }

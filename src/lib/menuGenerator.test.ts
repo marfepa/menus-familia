@@ -404,6 +404,35 @@ describe('menuGenerator', () => {
     assert.equal(isMeatRecipe(rec31!), true);
     assert.equal(isFishRecipe(rec32!), true);
     assert.equal(isFishRecipe(rec33!), true);
+
+    assert.equal(rec30?.mealType, 'lunch');
+    assert.equal(rec31?.mealType, 'lunch');
+    assert.equal(rec32?.mealType, 'lunch');
+    assert.equal(rec33?.mealType, 'lunch');
+  });
+
+  it('garantiza que ninguna cena contiene pasta ni fresca ni procedente de sobras', () => {
+    const { plan, warnings } = generateSmartWeeklyPlanWithMeta('2026-08-31', INITIAL_RECIPES, {
+      mode: 'full',
+      rng: () => 0.25,
+    });
+
+    const recipeMap = new Map(INITIAL_RECIPES.map((r) => [r.id, r]));
+
+    PLAN_DAYS.forEach((day) => {
+      const dinnerSlot = plan.days[day].dinner;
+      if (dinnerSlot?.recipeId) {
+        const rec = recipeMap.get(dinnerSlot.recipeId);
+        assert.ok(rec, `Receta de cena en ${day} debe existir`);
+        assert.equal(
+          isPastaRecipe(rec!),
+          false,
+          `La cena de ${day} no puede ser pasta (${rec?.name})`
+        );
+      }
+    });
+
+    assert.equal(warnings.some((w) => w.includes('cena(s) contiene(n) pasta')), false);
   });
 });
 
