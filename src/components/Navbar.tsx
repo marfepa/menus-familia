@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, ShoppingCart, BookOpen, UploadCloud, Database, Refrigerator, Ban, RefreshCw, Cloud, WifiOff, Check } from 'lucide-react';
+import { Calendar, ShoppingCart, BookOpen, UploadCloud, Database, Refrigerator, Ban, RefreshCw, Cloud, WifiOff } from 'lucide-react';
 import type { SyncStatusState } from '@/types';
 
 interface NavbarProps {
@@ -80,7 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <ShoppingCart className="w-4 h-4" />
                 <span>Compra</span>
                 {shoppingItemsCount > 0 && (
-                  <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-600 text-white">
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white">
                     {shoppingItemsCount}
                   </span>
                 )}
@@ -97,11 +97,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Refrigerator className="w-4 h-4" />
                 <span>Despensa</span>
                 {expiringPantryCount > 0 ? (
-                  <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500 text-white animate-pulse" title="Productos por caducar">
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white animate-pulse" title="Productos por caducar">
                     {expiringPantryCount}
                   </span>
                 ) : pantryItemsCount > 0 ? (
-                  <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
                     {pantryItemsCount}
                   </span>
                 ) : null}
@@ -182,7 +182,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Ban className="w-3.5 h-3.5 text-rose-500" />
                 <span className="hidden md:inline">Vetados</span>
                 {excludedFoodsCount > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-rose-100 text-rose-800">
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800">
                     {excludedFoodsCount}
                   </span>
                 )}
@@ -237,7 +237,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="relative">
               <ShoppingCart className={`w-5 h-5 mb-0.5 transition-transform ${activeTab === 'shopping' ? 'scale-110 text-emerald-600' : ''}`} />
               {shoppingItemsCount > 0 && (
-                <span className="absolute -top-1 -right-2.5 px-1.5 py-0.2 min-w-[16px] text-center rounded-full text-[9px] font-black bg-emerald-600 text-white shadow-xs">
+                <span className="absolute -top-1 -right-2.5 px-1.5 py-0.5 min-w-[16px] text-center rounded-full text-[9px] font-black bg-emerald-600 text-white shadow-xs">
                   {shoppingItemsCount}
                 </span>
               )}
@@ -257,11 +257,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="relative">
               <Refrigerator className={`w-5 h-5 mb-0.5 transition-transform ${activeTab === 'pantry' ? 'scale-110 text-emerald-600' : ''}`} />
               {expiringPantryCount > 0 ? (
-                <span className="absolute -top-1 -right-2.5 px-1.5 py-0.2 min-w-[16px] text-center rounded-full text-[9px] font-black bg-rose-500 text-white animate-pulse shadow-xs" title="Por caducar">
+                <span className="absolute -top-1 -right-2.5 px-1.5 py-0.5 min-w-[16px] text-center rounded-full text-[9px] font-black bg-rose-500 text-white animate-pulse shadow-xs" title="Por caducar">
                   {expiringPantryCount}
                 </span>
               ) : pantryItemsCount > 0 ? (
-                <span className="absolute -top-1 -right-2.5 px-1.5 py-0.2 min-w-[16px] text-center rounded-full text-[9px] font-bold bg-slate-200 text-slate-700">
+                <span className="absolute -top-1 -right-2.5 px-1.5 py-0.5 min-w-[16px] text-center rounded-full text-[9px] font-bold bg-slate-200 text-slate-700">
                   {pantryItemsCount}
                 </span>
               ) : null}
@@ -281,7 +281,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="relative">
               <BookOpen className={`w-5 h-5 mb-0.5 transition-transform ${activeTab === 'recipes' ? 'scale-110 text-emerald-600' : ''}`} />
               {recipesCount > 0 && (
-                <span className="absolute -top-1 -right-2 px-1 py-0.2 rounded-full text-[8px] font-bold bg-slate-200/80 text-slate-600">
+                <span className="absolute -top-1 -right-2 px-1 py-0.5 rounded-full text-[8px] font-bold bg-slate-200/80 text-slate-600">
                   {recipesCount}
                 </span>
               )}

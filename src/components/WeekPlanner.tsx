@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { WeeklyPlan, Recipe, DayOfWeek, DAYS_CONFIG, GenerateMode } from '@/types';
 import { MealSlot } from './MealSlot';
 import { formatWeekRange, getRelativeWeekMonday, getMonday } from '@/lib/utils';
@@ -123,7 +123,7 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
                 Semana Planificada
               </span>
               <span className="text-xs sm:text-base font-extrabold text-slate-900 flex items-center gap-1.5 justify-end sm:justify-start">
-                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 hidden xs:inline" />
+                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 hidden sm:inline" />
                 {formatWeekRange(currentWeekStartDate)}
               </span>
             </div>
@@ -200,7 +200,7 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
               title="Copiar menú de la semana anterior"
             >
               <Copy className="w-3.5 h-3.5 text-slate-500" />
-              <span className="hidden xs:inline">Copiar</span>
+              <span className="hidden sm:inline">Copiar</span>
             </button>
 
             {/* Vaciar semana */}
@@ -215,7 +215,7 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
                 title="Vaciar menú de la semana"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span className="hidden xs:inline">Vaciar</span>
+                <span className="hidden sm:inline">Vaciar</span>
               </button>
             )}
           </div>
@@ -224,7 +224,7 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
           <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
             <button
               onClick={handleGenerateWithCelebration}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 hover:shadow transition-all active:scale-98 text-center"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 hover:shadow transition-all active:scale-[0.98] text-center"
             >
               <Sparkles className="w-4 h-4 text-yellow-300 fill-yellow-300 shrink-0" />
               <span>Generar menú</span>
@@ -232,7 +232,7 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
 
             <button
               onClick={onGoToShoppingList}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-xs transition-all active:scale-98 text-center"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-xs transition-all active:scale-[0.98] text-center"
             >
               <ShoppingCart className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>Ver Compra</span>
