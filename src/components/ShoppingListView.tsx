@@ -242,47 +242,50 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       </div>
 
       {/* Selector de División por Tramos de Compra (L-V vs Finde vs Todo) */}
-      <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between flex-wrap gap-2 no-print">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-600 pl-2">
-          <ShoppingBag className="w-4 h-4 text-emerald-600" />
+      <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 no-print">
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-700 pl-1">
+          <ShoppingBag className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>Tramo de compra en tienda:</span>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-full sm:w-auto">
+        <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto">
           <button
             onClick={() => setSelectedPeriod('all')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center justify-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-center ${
               selectedPeriod === 'all'
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Globe className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Semana Completa</span>
+            <Globe className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span className="hidden sm:inline">Semana Completa</span>
+            <span className="sm:hidden">Todos</span>
           </button>
 
           <button
             onClick={() => setSelectedPeriod('weekday')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center justify-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-center ${
               selectedPeriod === 'weekday'
                 ? 'bg-white text-emerald-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Building2 className="w-3.5 h-3.5 text-amber-600" />
-            <span>🏢 L-V Mediodía (Tuppers / Oficina)</span>
+            <Building2 className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span className="hidden sm:inline">🏢 L-V (Tuppers)</span>
+            <span className="sm:hidden">🏢 Tuppers</span>
           </button>
 
           <button
             onClick={() => setSelectedPeriod('weekend')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center justify-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-center ${
               selectedPeriod === 'weekend'
                 ? 'bg-white text-indigo-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Home className="w-3.5 h-3.5 text-indigo-600" />
-            <span>🏠 Fin de Semana</span>
+            <Home className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+            <span className="hidden sm:inline">🏠 Fin de Semana</span>
+            <span className="sm:hidden">🏠 Finde</span>
           </button>
         </div>
       </div>
@@ -291,7 +294,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       {totalCount > 0 && (
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 no-print">
           <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 font-black text-sm">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 font-black text-sm shrink-0">
               {progressPercent}%
             </div>
             <div>
@@ -328,16 +331,16 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs no-print">
         <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-          <Refrigerator className="w-3.5 h-3.5 text-emerald-600" />
+          <Refrigerator className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
           <span>Ya lo tengo (se resta de la lista)</span>
         </h3>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2">
           {pantry.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => onTogglePantryItem(item.id)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all min-h-[44px] ${
+              className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold border transition-all ${
                 item.inStock
                   ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
                   : 'bg-slate-50 border-slate-200 text-slate-500'
@@ -353,17 +356,17 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       {/* Formulario para Añadir Artículos Manuales (Fuera de Menú) */}
       <div className={`bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs no-print ${storeMode ? 'hidden' : ''}`}>
         <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-          <Plus className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Añadir producto extra (pañales, meriendas infantiles, café, limpieza...)</span>
+          <Plus className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span>Añadir producto extra (meriendas, café, limpieza...)</span>
         </h3>
 
-        <form onSubmit={handleAddCustomSubmit} className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+        <form onSubmit={handleAddCustomSubmit} className="grid grid-cols-2 sm:grid-cols-12 gap-2">
           <input
             type="text"
-            placeholder="Nombre del producto (ej. Plátanos de Canarias, Papel cocina)..."
+            placeholder="Nombre del producto (ej. Plátanos, Papel cocina)..."
             value={customName}
             onChange={(e) => setCustomName(e.target.value)}
-            className="sm:col-span-4 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+            className="col-span-2 sm:col-span-4 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
           />
 
           <input
@@ -372,13 +375,13 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
             placeholder="Cant."
             value={customQty}
             onChange={(e) => setCustomQty(e.target.value)}
-            className="sm:col-span-2 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl text-center"
+            className="col-span-1 sm:col-span-2 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl text-center"
           />
 
           <select
             value={customPackageFormat}
             onChange={(e) => setCustomPackageFormat(e.target.value as PackageFormat)}
-            className="sm:col-span-3 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl font-medium"
+            className="col-span-1 sm:col-span-3 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl font-medium"
           >
             {Object.entries(PACKAGE_FORMAT_CONFIG).map(([key, fmt]) => (
               <option key={key} value={key}>
@@ -390,7 +393,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
           <select
             value={customCategory}
             onChange={(e) => setCustomCategory(e.target.value as IngredientCategory)}
-            className="sm:col-span-2 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl font-medium"
+            className="col-span-1 sm:col-span-2 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl font-medium"
           >
             {Object.entries(CATEGORY_LABELS).map(([key, cat]) => (
               <option key={key} value={key}>
@@ -402,7 +405,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
           <button
             type="submit"
             disabled={!customName.trim()}
-            className="sm:col-span-1 px-4 py-2 bg-emerald-600 disabled:opacity-50 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-xs transition-all flex items-center justify-center"
+            className="col-span-1 sm:col-span-1 px-4 py-2 bg-emerald-600 disabled:opacity-50 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-xs transition-all flex items-center justify-center"
           >
             Añadir
           </button>

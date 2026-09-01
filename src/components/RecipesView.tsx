@@ -156,7 +156,7 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
         </div>
 
         {/* Tags y Favoritos */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
           <button
             onClick={() => setOnlyFavorites(!onlyFavorites)}
             className={`px-3 py-1 rounded-lg font-semibold whitespace-nowrap flex items-center gap-1.5 transition-colors shrink-0 ${

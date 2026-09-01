@@ -82,143 +82,162 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
     <div className="space-y-6 animate-in fade-in duration-150">
       
       {/* Barra de Control Semanal y Acciones Inteligentes */}
-      <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200 shadow-xs flex flex-col lg:flex-row items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-4">
         
-        {/* Selector y Navegación de Semanas */}
-        <div className="flex items-center gap-2 sm:gap-3 w-full lg:w-auto justify-between lg:justify-start">
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200">
-            <button
-              onClick={() => setCurrentWeekStartDate(getRelativeWeekMonday(-1, currentWeekStartDate))}
-              className="p-2 rounded-xl hover:bg-white text-slate-600 hover:text-slate-900 transition-all"
-              title="Semana anterior"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
+        {/* Fila 1: Selector y Navegación de Semanas */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2 sm:gap-3 justify-between sm:justify-start w-full sm:w-auto">
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200">
+              <button
+                onClick={() => setCurrentWeekStartDate(getRelativeWeekMonday(-1, currentWeekStartDate))}
+                className="p-2 rounded-xl hover:bg-white text-slate-600 hover:text-slate-900 transition-all active:scale-95"
+                title="Semana anterior"
+                aria-label="Semana anterior"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
 
-            <button
-              onClick={() => setCurrentWeekStartDate(currentMondayToday)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                isCurrentWeek
-                  ? 'bg-white text-emerald-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-              }`}
-            >
-              Hoy
-            </button>
+              <button
+                onClick={() => setCurrentWeekStartDate(currentMondayToday)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  isCurrentWeek
+                    ? 'bg-white text-emerald-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                Hoy
+              </button>
 
-            <button
-              onClick={() => setCurrentWeekStartDate(getRelativeWeekMonday(1, currentWeekStartDate))}
-              className="p-2 rounded-xl hover:bg-white text-slate-600 hover:text-slate-900 transition-all"
-              title="Semana siguiente"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+              <button
+                onClick={() => setCurrentWeekStartDate(getRelativeWeekMonday(1, currentWeekStartDate))}
+                className="p-2 rounded-xl hover:bg-white text-slate-600 hover:text-slate-900 transition-all active:scale-95"
+                title="Semana siguiente"
+                aria-label="Semana siguiente"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-right sm:text-left">
+              <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                Semana Planificada
+              </span>
+              <span className="text-xs sm:text-base font-extrabold text-slate-900 flex items-center gap-1.5 justify-end sm:justify-start">
+                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 hidden xs:inline" />
+                {formatWeekRange(currentWeekStartDate)}
+              </span>
+            </div>
           </div>
 
-          <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-              Semana Planificada
-            </span>
-            <span className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-emerald-600 hidden sm:inline" />
-              {formatWeekRange(currentWeekStartDate)}
-            </span>
+          {/* Indicador de estado y comensales en Fila 1 para Desktop / Fila fluida */}
+          <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
+            {/* Indicador de platos completados */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-600">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+              <span>
+                <strong className="text-slate-900 font-bold">{plannedCount}</strong>/14 comidas
+              </span>
+            </div>
+
+            {/* Contador de comensales */}
+            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-2xl px-2 py-1">
+              <Users className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+              <button
+                type="button"
+                onClick={() => onHouseholdServingsChange(Math.max(2, householdServings - 1))}
+                className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 active:scale-95 transition-all"
+                title="Menos comensales"
+              >
+                −
+              </button>
+              <span className="text-xs font-bold text-slate-800 w-12 sm:w-14 text-center">{householdServings} rac.</span>
+              <button
+                type="button"
+                onClick={() => onHouseholdServingsChange(Math.min(8, householdServings + 1))}
+                className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 active:scale-95 transition-all"
+                title="Más comensales"
+              >
+                +
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Resumen de estado & Acciones del Menú */}
-        <div className="flex items-center gap-2 sm:gap-3 w-full lg:w-auto justify-end flex-wrap">
+        {/* Fila 2: Modos, Herramientas secundarias y Acciones Principales */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-1">
           
-          {/* Indicador de platos completados */}
-          <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-600">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>
-              <strong className="text-slate-900 font-bold">{plannedCount}</strong> de 14 comidas
-            </span>
-          </div>
+          {/* Herramientas de Planificación (Modo, Air-Fryer, Copiar, Vaciar) */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={generateMode}
+              onChange={(e) => onGenerateModeChange(e.target.value as GenerateMode)}
+              className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            >
+              <option value="full">Semana completa</option>
+              <option value="dinners">Solo cenas</option>
+              <option value="tuppers">Solo tuppers L–V</option>
+            </select>
 
-          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-2xl px-2 py-1.5">
-            <Users className="w-3.5 h-3.5 text-slate-500" />
+            {/* Toggle Air-Fryer en Cenas */}
             <button
               type="button"
-              onClick={() => onHouseholdServingsChange(Math.max(2, householdServings - 1))}
-              className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold"
+              onClick={() => onToggleAirFryerDinners?.(!prioritizeAirFryerDinners)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all border ${
+                prioritizeAirFryerDinners
+                  ? 'bg-orange-50 text-orange-700 border-orange-300 shadow-xs'
+                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+              }`}
+              title="Priorizar recetas rápidas de Air-Fryer en las cenas de la semana"
             >
-              −
+              <span>♨️</span>
+              <span className="text-xs">Air-Fryer</span>
             </button>
-            <span className="text-xs font-bold text-slate-800 w-14 text-center">{householdServings} rac.</span>
+
+            {/* Copiar semana anterior */}
             <button
-              type="button"
-              onClick={() => onHouseholdServingsChange(Math.min(8, householdServings + 1))}
-              className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold"
+              onClick={onCopyPreviousWeek}
+              className="flex items-center gap-1 px-3 py-2 rounded-2xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 transition-all text-xs font-medium"
+              title="Copiar menú de la semana anterior"
             >
-              +
+              <Copy className="w-3.5 h-3.5 text-slate-500" />
+              <span className="hidden xs:inline">Copiar</span>
             </button>
+
+            {/* Vaciar semana */}
+            {plannedCount > 0 && (
+              <button
+                onClick={() => {
+                  if (confirm('¿Vaciar todo el menú de esta semana?')) {
+                    onClearWeek();
+                  }
+                }}
+                className="flex items-center gap-1 px-3 py-2 rounded-2xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition-all text-xs font-medium"
+                title="Vaciar menú de la semana"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline">Vaciar</span>
+              </button>
+            )}
           </div>
 
-          <select
-            value={generateMode}
-            onChange={(e) => onGenerateModeChange(e.target.value as GenerateMode)}
-            className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2.5 text-slate-700"
-          >
-            <option value="full">Semana completa</option>
-            <option value="dinners">Solo cenas</option>
-            <option value="tuppers">Solo tuppers L–V</option>
-          </select>
-
-          {/* Toggle Air-Fryer en Cenas */}
-          <button
-            type="button"
-            onClick={() => onToggleAirFryerDinners?.(!prioritizeAirFryerDinners)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all border ${
-              prioritizeAirFryerDinners
-                ? 'bg-orange-50 text-orange-700 border-orange-300 shadow-xs'
-                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-            }`}
-            title="Priorizar recetas rápidas de Air-Fryer en las cenas de la semana"
-          >
-            <span>♨️</span>
-            <span className="hidden sm:inline">Cenas Air-Fryer</span>
-          </button>
-
-          <button
-            onClick={onCopyPreviousWeek}
-            className="p-2.5 rounded-2xl text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 transition-all"
-            title="Copiar semana anterior"
-          >
-            <Copy className="w-4 h-4" />
-          </button>
-
-          {plannedCount > 0 && (
+          {/* Botones de Acción Primaria */}
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
             <button
-              onClick={() => {
-                if (confirm('¿Vaciar todo el menú de esta semana?')) {
-                  onClearWeek();
-                }
-              }}
-              className="p-2.5 rounded-2xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition-all text-xs font-medium"
-              title="Vaciar menú de la semana"
+              onClick={handleGenerateWithCelebration}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 hover:shadow transition-all active:scale-98 text-center"
             >
-              <RotateCcw className="w-4 h-4" />
+              <Sparkles className="w-4 h-4 text-yellow-300 fill-yellow-300 shrink-0" />
+              <span>Generar menú</span>
             </button>
-          )}
 
-          <button
-            onClick={handleGenerateWithCelebration}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 hover:shadow transition-all hover:scale-[1.02]"
-          >
-            <Sparkles className="w-4 h-4 text-yellow-300 fill-yellow-300" />
-            <span>Generar menú</span>
-          </button>
-
-          {/* Botón Ir a Lista de la Compra */}
-          <button
-            onClick={onGoToShoppingList}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-sm transition-all hover:shadow hover:scale-[1.02]"
-          >
-            <ShoppingCart className="w-4 h-4 text-emerald-400" />
-            <span>Ver Lista Compra</span>
-          </button>
+            <button
+              onClick={onGoToShoppingList}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-xs transition-all active:scale-98 text-center"
+            >
+              <ShoppingCart className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Ver Compra</span>
+            </button>
+          </div>
 
         </div>
 

@@ -450,7 +450,7 @@ export default function Home() {
 
 
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-28 sm:pb-8">
         {activeTab === 'planner' && (
           <WeekPlanner
             currentWeekStartDate={currentWeekStartDate}
@@ -522,7 +522,7 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="py-6 border-t border-slate-200 bg-white text-center text-xs text-slate-400 no-print">
+      <footer className="py-6 border-t border-slate-200 bg-white text-center text-xs text-slate-400 no-print pb-24 sm:pb-6">
         <p>Planificador de Menús Familiar • Diseñado para una alimentación sana, variada y organizada 🥑</p>
       </footer>
 
