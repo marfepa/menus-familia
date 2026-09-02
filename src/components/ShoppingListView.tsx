@@ -12,6 +12,7 @@ import {
   AppleRemindersConfig,
 } from '@/types';
 import { formatShoppingListForShare } from '@/lib/shoppingListGenerator';
+import { inferCategory, inferDefaultPackageFormat } from '@/lib/reminders/reminderImporter';
 import { formatWeekRange } from '@/lib/utils';
 import { AppleRemindersModal } from '@/components/AppleRemindersModal';
 import {
@@ -77,9 +78,28 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   const [customUnit, setCustomUnit] = useState('');
   const [customCategory, setCustomCategory] = useState<IngredientCategory>('fruteria');
   const [customPackageFormat, setCustomPackageFormat] = useState<PackageFormat>('granel');
+  const [hasUserChangedCategory, setHasUserChangedCategory] = useState(false);
+  const [hasUserChangedFormat, setHasUserChangedFormat] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const weekRange = formatWeekRange(weekStartDate);
+
+  const handleCustomNameChange = (name: string) => {
+    setCustomName(name);
+    if (name.trim()) {
+      if (!hasUserChangedCategory) {
+        const cat = inferCategory(name);
+        setCustomCategory(cat);
+        if (!hasUserChangedFormat) {
+          const fmt = inferDefaultPackageFormat(name, cat);
+          setCustomPackageFormat(fmt);
+        }
+      } else if (!hasUserChangedFormat) {
+        const fmt = inferDefaultPackageFormat(name, customCategory);
+        setCustomPackageFormat(fmt);
+      }
+    }
+  };
 
   // Filtrar items por el tramo seleccionado
   const visibleItems = useMemo(() => {
@@ -158,6 +178,9 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
     setCustomQty('');
     setCustomUnit('');
     setCustomPackageFormat('granel');
+    setCustomCategory('fruteria');
+    setHasUserChangedCategory(false);
+    setHasUserChangedFormat(false);
   };
 
   return (
@@ -365,7 +388,7 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
             type="text"
             placeholder="Nombre del producto (ej. Plátanos, Papel cocina)..."
             value={customName}
-            onChange={(e) => setCustomName(e.target.value)}
+            onChange={(e) => handleCustomNameChange(e.target.value)}
             className="col-span-2 sm:col-span-4 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
           />
 
@@ -380,7 +403,10 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
           <select
             value={customPackageFormat}
-            onChange={(e) => setCustomPackageFormat(e.target.value as PackageFormat)}
+            onChange={(e) => {
+              setCustomPackageFormat(e.target.value as PackageFormat);
+              setHasUserChangedFormat(true);
+            }}
             className="col-span-1 sm:col-span-3 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl font-medium"
           >
             {Object.entries(PACKAGE_FORMAT_CONFIG).map(([key, fmt]) => (
@@ -392,7 +418,10 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
           <select
             value={customCategory}
-            onChange={(e) => setCustomCategory(e.target.value as IngredientCategory)}
+            onChange={(e) => {
+              setCustomCategory(e.target.value as IngredientCategory);
+              setHasUserChangedCategory(true);
+            }}
             className="col-span-1 sm:col-span-2 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl font-medium"
           >
             {Object.entries(CATEGORY_LABELS).map(([key, cat]) => (
@@ -457,9 +486,12 @@ export const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                   {/* Items de la sección con presentación comercial de supermercado */}
                   <div className="space-y-2.5">
                     {catItems.map((item) => {
-                      const pkgConfig = item.packageFormat
-                        ? PACKAGE_FORMAT_CONFIG[item.packageFormat]
-                        : PACKAGE_FORMAT_CONFIG.granel;
+                      const effectiveFormat =
+                        item.packageFormat && item.packageFormat !== 'granel'
+                          ? item.packageFormat
+                          : inferDefaultPackageFormat(item.name, item.category);
+                      const pkgConfig =
+                        PACKAGE_FORMAT_CONFIG[effectiveFormat] || PACKAGE_FORMAT_CONFIG.granel;
 
                       return (
                         <div
