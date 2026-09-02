@@ -79,18 +79,18 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-150">
+    <div className="space-y-5 animate-in fade-in duration-150">
       
       {/* Barra de Control Semanal y Acciones Inteligentes */}
-      <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-4">
+      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs space-y-3.5">
         
         {/* Fila 1: Selector y Navegación de Semanas */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2 sm:gap-3 justify-between sm:justify-start w-full sm:w-auto">
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200">
+            <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/80">
               <button
                 onClick={() => setCurrentWeekStartDate(getRelativeWeekMonday(-1, currentWeekStartDate))}
-                className="p-2 rounded-xl hover:bg-white text-slate-600 hover:text-slate-900 transition-all active:scale-95"
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-white text-slate-600 hover:text-slate-900 transition-all active:scale-95"
                 title="Semana anterior"
                 aria-label="Semana anterior"
               >
@@ -99,9 +99,9 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
 
               <button
                 onClick={() => setCurrentWeekStartDate(currentMondayToday)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                   isCurrentWeek
-                    ? 'bg-white text-emerald-700 shadow-xs'
+                    ? 'bg-white text-emerald-700 shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
@@ -110,7 +110,7 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
 
               <button
                 onClick={() => setCurrentWeekStartDate(getRelativeWeekMonday(1, currentWeekStartDate))}
-                className="p-2 rounded-xl hover:bg-white text-slate-600 hover:text-slate-900 transition-all active:scale-95"
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-white text-slate-600 hover:text-slate-900 transition-all active:scale-95"
                 title="Semana siguiente"
                 aria-label="Semana siguiente"
               >
@@ -119,20 +119,20 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
             </div>
 
             <div className="text-right sm:text-left">
-              <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                 Semana Planificada
               </span>
-              <span className="text-xs sm:text-base font-extrabold text-slate-900 flex items-center gap-1.5 justify-end sm:justify-start">
-                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 hidden sm:inline" />
+              <span className="text-xs sm:text-sm font-extrabold text-slate-900 flex items-center gap-1.5 justify-end sm:justify-start">
+                <Calendar className="w-3.5 h-3.5 text-emerald-600 hidden sm:inline" />
                 {formatWeekRange(currentWeekStartDate)}
               </span>
             </div>
           </div>
 
-          {/* Indicador de estado y comensales en Fila 1 para Desktop / Fila fluida */}
+          {/* Indicador de estado y comensales */}
           <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
             {/* Indicador de platos completados */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-600">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs font-medium text-slate-600">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
               <span>
                 <strong className="text-slate-900 font-bold">{plannedCount}</strong>/14 comidas
@@ -140,12 +140,12 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
             </div>
 
             {/* Contador de comensales */}
-            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-2xl px-2 py-1">
+            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200/80 rounded-xl px-2 py-1">
               <Users className="w-3.5 h-3.5 text-slate-500 shrink-0" />
               <button
                 type="button"
                 onClick={() => onHouseholdServingsChange(Math.max(2, householdServings - 1))}
-                className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 active:scale-95 transition-all"
+                className="w-6 h-6 rounded-lg bg-white border border-slate-200/80 text-slate-700 font-bold text-xs hover:bg-slate-50 active:scale-95 transition-all shadow-2xs"
                 title="Menos comensales"
               >
                 −
@@ -154,7 +154,7 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
               <button
                 type="button"
                 onClick={() => onHouseholdServingsChange(Math.min(8, householdServings + 1))}
-                className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 active:scale-95 transition-all"
+                className="w-6 h-6 rounded-lg bg-white border border-slate-200/80 text-slate-700 font-bold text-xs hover:bg-slate-50 active:scale-95 transition-all shadow-2xs"
                 title="Más comensales"
               >
                 +
@@ -164,14 +164,14 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
         </div>
 
         {/* Fila 2: Modos, Herramientas secundarias y Acciones Principales */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-1">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-0.5">
           
           {/* Herramientas de Planificación (Modo, Air-Fryer, Copiar, Vaciar) */}
           <div className="flex items-center gap-2 flex-wrap">
             <select
               value={generateMode}
               onChange={(e) => onGenerateModeChange(e.target.value as GenerateMode)}
-              className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              className="text-xs font-bold bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-2xs"
             >
               <option value="full">Semana completa</option>
               <option value="dinners">Solo cenas</option>
@@ -182,10 +182,10 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
             <button
               type="button"
               onClick={() => onToggleAirFryerDinners?.(!prioritizeAirFryerDinners)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all border ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
                 prioritizeAirFryerDinners
-                  ? 'bg-orange-50 text-orange-700 border-orange-300 shadow-xs'
-                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  ? 'bg-orange-50 text-orange-700 border-orange-300 shadow-2xs'
+                  : 'bg-slate-50 text-slate-600 border-slate-200/80 hover:bg-slate-100 shadow-2xs'
               }`}
               title="Priorizar recetas rápidas de Air-Fryer en las cenas de la semana"
             >
@@ -196,7 +196,7 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
             {/* Copiar semana anterior */}
             <button
               onClick={onCopyPreviousWeek}
-              className="flex items-center gap-1 px-3 py-2 rounded-2xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 transition-all text-xs font-medium"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50/50 border border-slate-200/80 transition-all text-xs font-medium shadow-2xs"
               title="Copiar menú de la semana anterior"
             >
               <Copy className="w-3.5 h-3.5 text-slate-500" />
@@ -211,7 +211,7 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
                     onClearWeek();
                   }
                 }}
-                className="flex items-center gap-1 px-3 py-2 rounded-2xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition-all text-xs font-medium"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200/80 hover:border-rose-200 transition-all text-xs font-medium shadow-2xs"
                 title="Vaciar menú de la semana"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -224,7 +224,7 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
           <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
             <button
               onClick={handleGenerateWithCelebration}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 hover:shadow transition-all active:scale-[0.98] text-center"
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs sm:text-sm shadow-sm shadow-emerald-600/20 hover:shadow transition-all active:scale-[0.98] text-center"
             >
               <Sparkles className="w-4 h-4 text-yellow-300 fill-yellow-300 shrink-0" />
               <span>Generar menú</span>
@@ -232,7 +232,7 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
 
             <button
               onClick={onGoToShoppingList}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-xs transition-all active:scale-[0.98] text-center"
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-2xs transition-all active:scale-[0.98] text-center"
             >
               <ShoppingCart className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>Ver Compra</span>
@@ -254,8 +254,8 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
         </div>
       )}
 
-      {/* Cuadrícula Semanal (7 Columnas Lunes a Domingo) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3 sm:gap-4">
+      {/* Cuadrícula Semanal Homogénea (7 Columnas Lunes a Domingo) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
         {(() => {
           const cookingSessions = getPlanCookingSessions(weeklyPlan);
           return DAYS_CONFIG.map((dayConfig, index) => {
@@ -269,61 +269,52 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
             const lunchContext = cookingSessions.get(`${dayConfig.id}-lunch`);
             const dinnerContext = cookingSessions.get(`${dayConfig.id}-dinner`);
 
-            // Es fin de semana?
             const isWeekend = dayConfig.id === 'sabado' || dayConfig.id === 'domingo';
 
             return (
               <div
                 key={dayConfig.id}
-                className={`rounded-3xl border transition-all p-3 sm:p-4 flex flex-col justify-between space-y-3 ${
-                  isWeekend
-                    ? 'bg-amber-50/40 border-amber-200/70 shadow-xs'
-                    : 'bg-white border-slate-200/80 shadow-xs hover:border-slate-300'
-                }`}
+                className="rounded-2xl border border-slate-200/80 bg-white shadow-2xs hover:shadow-xs transition-all p-3 sm:p-3.5 flex flex-col space-y-2.5"
               >
                 
                 {/* Cabecera del día */}
-                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100 h-7">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-extrabold text-sm text-slate-800">
+                    <span className="font-extrabold text-xs sm:text-sm text-slate-800">
                       {dayConfig.label}
                     </span>
                     {isWeekend && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200/60 uppercase tracking-wider">
                         Finde
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-slate-400 font-medium">
+                  <span className="text-[11px] text-slate-400 font-medium">
                     Día {index + 1}
                   </span>
                 </div>
 
                 {/* Casilla Comida (Almuerzo) */}
-                <div className="space-y-1">
-                  <MealSlot
-                    type="lunch"
-                    slotData={lunchSlot}
-                    recipe={lunchRecipe}
-                    cookingContext={lunchContext}
-                    onAssignClick={() => onOpenSlotModal(dayConfig.id, 'lunch')}
-                    onClearClick={() => onClearSlot(dayConfig.id, 'lunch')}
-                    onViewRecipe={onViewRecipe}
-                  />
-                </div>
+                <MealSlot
+                  type="lunch"
+                  slotData={lunchSlot}
+                  recipe={lunchRecipe}
+                  cookingContext={lunchContext}
+                  onAssignClick={() => onOpenSlotModal(dayConfig.id, 'lunch')}
+                  onClearClick={() => onClearSlot(dayConfig.id, 'lunch')}
+                  onViewRecipe={onViewRecipe}
+                />
 
                 {/* Casilla Cena */}
-                <div className="space-y-1">
-                  <MealSlot
-                    type="dinner"
-                    slotData={dinnerSlot}
-                    recipe={dinnerRecipe}
-                    cookingContext={dinnerContext}
-                    onAssignClick={() => onOpenSlotModal(dayConfig.id, 'dinner')}
-                    onClearClick={() => onClearSlot(dayConfig.id, 'dinner')}
-                    onViewRecipe={onViewRecipe}
-                  />
-                </div>
+                <MealSlot
+                  type="dinner"
+                  slotData={dinnerSlot}
+                  recipe={dinnerRecipe}
+                  cookingContext={dinnerContext}
+                  onAssignClick={() => onOpenSlotModal(dayConfig.id, 'dinner')}
+                  onClearClick={() => onClearSlot(dayConfig.id, 'dinner')}
+                  onViewRecipe={onViewRecipe}
+                />
 
               </div>
             );
