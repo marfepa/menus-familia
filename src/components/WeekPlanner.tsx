@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { WeeklyPlan, Recipe, DayOfWeek, DAYS_CONFIG, GenerateMode } from '@/types';
 import { MealSlot } from './MealSlot';
 import { formatWeekRange, getRelativeWeekMonday, getMonday } from '@/lib/utils';
-import { countPlannedSlots } from '@/lib/planUtils';
+import { countPlannedSlots, getPlanCookingSessions, SlotCookingContext } from '@/lib/planUtils';
 import {
   ChevronLeft,
   ChevronRight,
@@ -25,7 +25,7 @@ interface WeekPlannerProps {
   recipes: Recipe[];
   onOpenSlotModal: (day: DayOfWeek, type: 'lunch' | 'dinner') => void;
   onClearSlot: (day: DayOfWeek, type: 'lunch' | 'dinner') => void;
-  onViewRecipe: (recipe: Recipe) => void;
+  onViewRecipe: (recipe: Recipe, context?: SlotCookingContext) => void;
   onSmartGenerate: () => void;
   onClearWeek: () => void;
   onCopyPreviousWeek: () => void;
@@ -256,71 +256,79 @@ export const WeekPlanner: React.FC<WeekPlannerProps> = ({
 
       {/* Cuadrícula Semanal (7 Columnas Lunes a Domingo) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3 sm:gap-4">
-        {DAYS_CONFIG.map((dayConfig, index) => {
-          const dayPlan = weeklyPlan.days[dayConfig.id] || {};
-          const lunchSlot = dayPlan.lunch;
-          const dinnerSlot = dayPlan.dinner;
+        {(() => {
+          const cookingSessions = getPlanCookingSessions(weeklyPlan);
+          return DAYS_CONFIG.map((dayConfig, index) => {
+            const dayPlan = weeklyPlan.days[dayConfig.id] || {};
+            const lunchSlot = dayPlan.lunch;
+            const dinnerSlot = dayPlan.dinner;
 
-          const lunchRecipe = lunchSlot?.recipeId ? recipeMap.get(lunchSlot.recipeId) : undefined;
-          const dinnerRecipe = dinnerSlot?.recipeId ? recipeMap.get(dinnerSlot.recipeId) : undefined;
+            const lunchRecipe = lunchSlot?.recipeId ? recipeMap.get(lunchSlot.recipeId) : undefined;
+            const dinnerRecipe = dinnerSlot?.recipeId ? recipeMap.get(dinnerSlot.recipeId) : undefined;
 
-          // Es fin de semana?
-          const isWeekend = dayConfig.id === 'sabado' || dayConfig.id === 'domingo';
+            const lunchContext = cookingSessions.get(`${dayConfig.id}-lunch`);
+            const dinnerContext = cookingSessions.get(`${dayConfig.id}-dinner`);
 
-          return (
-            <div
-              key={dayConfig.id}
-              className={`rounded-3xl border transition-all p-3 sm:p-4 flex flex-col justify-between space-y-3 ${
-                isWeekend
-                  ? 'bg-amber-50/40 border-amber-200/70 shadow-xs'
-                  : 'bg-white border-slate-200/80 shadow-xs hover:border-slate-300'
-              }`}
-            >
-              
-              {/* Cabecera del día */}
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-sm text-slate-800">
-                    {dayConfig.label}
-                  </span>
-                  {isWeekend && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800">
-                      Finde
+            // Es fin de semana?
+            const isWeekend = dayConfig.id === 'sabado' || dayConfig.id === 'domingo';
+
+            return (
+              <div
+                key={dayConfig.id}
+                className={`rounded-3xl border transition-all p-3 sm:p-4 flex flex-col justify-between space-y-3 ${
+                  isWeekend
+                    ? 'bg-amber-50/40 border-amber-200/70 shadow-xs'
+                    : 'bg-white border-slate-200/80 shadow-xs hover:border-slate-300'
+                }`}
+              >
+                
+                {/* Cabecera del día */}
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-extrabold text-sm text-slate-800">
+                      {dayConfig.label}
                     </span>
-                  )}
+                    {isWeekend && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800">
+                        Finde
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-slate-400 font-medium">
+                    Día {index + 1}
+                  </span>
                 </div>
-                <span className="text-xs text-slate-400 font-medium">
-                  Día {index + 1}
-                </span>
-              </div>
 
-              {/* Casilla Comida (Almuerzo) */}
-              <div className="space-y-1">
-                <MealSlot
-                  type="lunch"
-                  slotData={lunchSlot}
-                  recipe={lunchRecipe}
-                  onAssignClick={() => onOpenSlotModal(dayConfig.id, 'lunch')}
-                  onClearClick={() => onClearSlot(dayConfig.id, 'lunch')}
-                  onViewRecipe={onViewRecipe}
-                />
-              </div>
+                {/* Casilla Comida (Almuerzo) */}
+                <div className="space-y-1">
+                  <MealSlot
+                    type="lunch"
+                    slotData={lunchSlot}
+                    recipe={lunchRecipe}
+                    cookingContext={lunchContext}
+                    onAssignClick={() => onOpenSlotModal(dayConfig.id, 'lunch')}
+                    onClearClick={() => onClearSlot(dayConfig.id, 'lunch')}
+                    onViewRecipe={onViewRecipe}
+                  />
+                </div>
 
-              {/* Casilla Cena */}
-              <div className="space-y-1">
-                <MealSlot
-                  type="dinner"
-                  slotData={dinnerSlot}
-                  recipe={dinnerRecipe}
-                  onAssignClick={() => onOpenSlotModal(dayConfig.id, 'dinner')}
-                  onClearClick={() => onClearSlot(dayConfig.id, 'dinner')}
-                  onViewRecipe={onViewRecipe}
-                />
-              </div>
+                {/* Casilla Cena */}
+                <div className="space-y-1">
+                  <MealSlot
+                    type="dinner"
+                    slotData={dinnerSlot}
+                    recipe={dinnerRecipe}
+                    cookingContext={dinnerContext}
+                    onAssignClick={() => onOpenSlotModal(dayConfig.id, 'dinner')}
+                    onClearClick={() => onClearSlot(dayConfig.id, 'dinner')}
+                    onViewRecipe={onViewRecipe}
+                  />
+                </div>
 
-            </div>
-          );
-        })}
+              </div>
+            );
+          });
+        })()}
       </div>
 
     </div>

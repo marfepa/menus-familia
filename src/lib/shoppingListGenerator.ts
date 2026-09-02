@@ -7,7 +7,12 @@ import type {
   PackageFormat,
   PantryItem,
 } from '@/types';
-import { PLAN_DAYS, slotNeedsIngredients } from '@/lib/planUtils';
+import {
+  PLAN_DAYS,
+  slotNeedsIngredients,
+  getPlanCookingSessions,
+  CHRONOLOGICAL_MEAL_SLOTS,
+} from '@/lib/planUtils';
 
 export function normalizeText(text: string): string {
   return text
@@ -1022,31 +1027,29 @@ export function generateShoppingListFromPlan(
     }
   >();
 
-  PLAN_DAYS.forEach((dayKey) => {
+  const cookingSessions = getPlanCookingSessions(plan);
+
+  CHRONOLOGICAL_MEAL_SLOTS.forEach(({ day: dayKey, meal }) => {
     const dayPlan = plan.days[dayKey];
     if (!dayPlan) return;
+    const slot = dayPlan[meal];
 
-    const isWeekendDay = dayKey === 'sabado' || dayKey === 'domingo';
-
-    if (slotNeedsIngredients(dayPlan.lunch) && dayPlan.lunch?.recipeId) {
-      const recipe = recipeMap.get(dayPlan.lunch.recipeId);
+    if (slotNeedsIngredients(slot) && slot?.recipeId) {
+      const recipe = recipeMap.get(slot.recipeId);
       if (recipe) {
-        processRecipeIngredients(recipe, isWeekendDay ? 'weekend' : 'weekday');
-      }
-    }
-
-    if (slotNeedsIngredients(dayPlan.dinner) && dayPlan.dinner?.recipeId) {
-      const recipe = recipeMap.get(dayPlan.dinner.recipeId);
-      if (recipe) {
+        const isWeekendDay = dayKey === 'sabado' || dayKey === 'domingo';
         const period: 'weekday' | 'weekend' =
-          dayKey === 'viernes' || isWeekendDay ? 'weekend' : 'weekday';
-        processRecipeIngredients(recipe, period);
+          (meal === 'dinner' && dayKey === 'viernes') || isWeekendDay ? 'weekend' : 'weekday';
+        const session = cookingSessions.get(`${dayKey}-${meal}`);
+        const instances = session ? session.totalInstances : 1;
+        processRecipeIngredients(recipe, period, instances);
       }
     }
   });
 
-  function processRecipeIngredients(recipe: Recipe, period: 'weekday' | 'weekend') {
-    const scale = householdServings / (recipe.servings || 4);
+  function processRecipeIngredients(recipe: Recipe, period: 'weekday' | 'weekend', instances = 1) {
+    const effectiveServings = householdServings * instances;
+    const scale = effectiveServings / (recipe.servings || 4);
     recipe.ingredients.forEach((ing) => {
       if (isCoveredByPantry(ing.name, pantry)) return;
 

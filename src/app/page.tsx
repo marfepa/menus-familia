@@ -20,7 +20,14 @@ import { syncManager } from '@/lib/syncManager';
 import { getMonday, getRelativeWeekMonday } from '@/lib/utils';
 import { generateShoppingListFromPlan } from '@/lib/shoppingListGenerator';
 import { analyzePlanWarnings, generateSmartWeeklyPlanWithMeta } from '@/lib/menuGenerator';
-import { clonePlanForWeek, emptyWeeklyPlan, isPlanEmpty } from '@/lib/planUtils';
+import {
+  clonePlanForWeek,
+  emptyWeeklyPlan,
+  isPlanEmpty,
+  getSlotKind,
+  CHRONOLOGICAL_MEAL_SLOTS,
+  SlotCookingContext,
+} from '@/lib/planUtils';
 import { createPantryItemFromShopping, calculateShelfLifeInfo } from '@/lib/pantryUtils';
 import { normalizeText } from '@/lib/shoppingListGenerator';
 
@@ -52,6 +59,7 @@ export default function Home() {
 
   const [slotModalInfo, setSlotModalInfo] = useState<{ day: DayOfWeek; type: 'lunch' | 'dinner' } | null>(null);
   const [recipeToView, setRecipeToView] = useState<Recipe | null>(null);
+  const [recipeCookingContext, setRecipeCookingContext] = useState<SlotCookingContext | null>(null);
   const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
@@ -134,8 +142,34 @@ export default function Home() {
   };
 
 
+  const handleViewRecipe = (recipe: Recipe, context?: SlotCookingContext) => {
+    setRecipeToView(recipe);
+    setRecipeCookingContext(context || null);
+  };
+
   const handleAssignRecipeToSlot = (recipeId: string, asLeftover = false) => {
     if (!slotModalInfo || !weeklyPlan) return;
+
+    let leftoverFromDay: DayOfWeek | undefined;
+    let leftoverFromMeal: ('lunch' | 'dinner') | undefined;
+
+    if (asLeftover) {
+      const currentIdx = CHRONOLOGICAL_MEAL_SLOTS.findIndex(
+        (s) => s.day === slotModalInfo.day && s.meal === slotModalInfo.type
+      );
+      if (currentIdx > 0) {
+        for (let i = currentIdx - 1; i >= 0; i--) {
+          const prevLoc = CHRONOLOGICAL_MEAL_SLOTS[i];
+          const prevSlot = weeklyPlan.days[prevLoc.day]?.[prevLoc.meal];
+          if (getSlotKind(prevSlot) === 'recipe' && prevSlot?.recipeId === recipeId) {
+            leftoverFromDay = prevLoc.day;
+            leftoverFromMeal = prevLoc.meal;
+            break;
+          }
+        }
+      }
+    }
+
     persistPlan({
       ...weeklyPlan,
       days: {
@@ -143,7 +177,13 @@ export default function Home() {
         [slotModalInfo.day]: {
           ...weeklyPlan.days[slotModalInfo.day],
           [slotModalInfo.type]: asLeftover
-            ? { kind: 'leftover', recipeId, customName: undefined }
+            ? {
+                kind: 'leftover',
+                recipeId,
+                customName: undefined,
+                leftoverFromDay,
+                leftoverFromMeal,
+              }
             : { kind: 'recipe', recipeId, customName: undefined },
         },
       },
@@ -459,7 +499,7 @@ export default function Home() {
             recipes={recipes}
             onOpenSlotModal={(day, type) => setSlotModalInfo({ day, type })}
             onClearSlot={handleClearSlot}
-            onViewRecipe={(r) => setRecipeToView(r)}
+            onViewRecipe={handleViewRecipe}
             onSmartGenerate={handleSmartGenerate}
             onClearWeek={handleClearWeek}
             onCopyPreviousWeek={handleCopyPreviousWeek}
@@ -507,7 +547,7 @@ export default function Home() {
               setRecipeToEdit(null);
               setIsFormModalOpen(true);
             }}
-            onViewRecipe={(r) => setRecipeToView(r)}
+            onViewRecipe={(r) => handleViewRecipe(r)}
             onEditRecipe={(r) => {
               setRecipeToEdit(r);
               setIsFormModalOpen(true);
@@ -543,12 +583,21 @@ export default function Home() {
       <RecipeDetailModal
         recipe={recipeToView}
         isOpen={Boolean(recipeToView)}
-        onClose={() => setRecipeToView(null)}
+        onClose={() => {
+          setRecipeToView(null);
+          setRecipeCookingContext(null);
+        }}
         onEdit={(r) => {
           setRecipeToEdit(r);
           setIsFormModalOpen(true);
         }}
         onToggleFavorite={handleToggleFavoriteRecipe}
+        contextServings={
+          recipeCookingContext
+            ? settings.householdServings * recipeCookingContext.totalInstances
+            : (recipeToView ? settings.householdServings : undefined)
+        }
+        cookingContext={recipeCookingContext}
       />
 
       <RecipeFormModal

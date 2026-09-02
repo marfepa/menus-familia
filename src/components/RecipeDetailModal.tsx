@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Recipe, CATEGORY_LABELS } from '@/types';
+import { SlotCookingContext } from '@/lib/planUtils';
 import { X, Clock, Users, Star, Edit, ChefHat, Briefcase, Baby, Calendar, RefreshCw } from 'lucide-react';
 
 interface RecipeDetailModalProps {
@@ -10,6 +11,8 @@ interface RecipeDetailModalProps {
   onClose: () => void;
   onEdit: (recipe: Recipe) => void;
   onToggleFavorite: (recipeId: string) => void;
+  contextServings?: number;
+  cookingContext?: SlotCookingContext | null;
 }
 
 export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
@@ -18,8 +21,18 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
   onClose,
   onEdit,
   onToggleFavorite,
+  contextServings,
+  cookingContext,
 }) => {
-  const [servings, setServings] = useState<number>(recipe?.servings || 4);
+  const [servings, setServings] = useState<number>(contextServings || recipe?.servings || 4);
+
+  useEffect(() => {
+    if (contextServings) {
+      setServings(contextServings);
+    } else if (recipe?.servings) {
+      setServings(recipe.servings);
+    }
+  }, [recipe, contextServings]);
 
   if (!isOpen || !recipe) return null;
 
@@ -139,6 +152,35 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
         {/* Contenido scrolleable: Ficha Niños/BLW, Ingredientes y Preparación */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
           
+          {/* Banner informativo de Cocina x2 / x3 con sobras */}
+          {cookingContext?.isFreshCook && cookingContext.leftoverCount > 0 && (
+            <div className="p-4 rounded-2xl bg-indigo-50/90 border border-indigo-200 text-xs sm:text-sm text-indigo-950 space-y-1 shadow-xs">
+              <div className="flex items-center gap-2 font-bold text-indigo-900">
+                <RefreshCw className="w-4 h-4 text-indigo-600" />
+                <span>Cocina x{1 + cookingContext.leftoverCount} ({servings} raciones automáticas)</span>
+              </div>
+              <p className="leading-relaxed pl-6 text-indigo-900/90">
+                Esta receta está planificada para comer hoy y guardar {cookingContext.leftoverCount} {cookingContext.leftoverCount === 1 ? 'toma de tupper/sobras' : 'tomas de tupper/sobras'}. Las cantidades de los ingredientes están escaladas para cocinar la cantidad exacta.
+              </p>
+            </div>
+          )}
+
+          {/* Banner informativo de plato de sobras */}
+          {cookingContext?.isLeftover && (
+            <div className="p-4 rounded-2xl bg-teal-50/90 border border-teal-200 text-xs sm:text-sm text-teal-950 space-y-1 shadow-xs">
+              <div className="flex items-center gap-2 font-bold text-teal-900">
+                <span className="text-base">🥡</span>
+                <span>Plato de sobras / Tupper</span>
+              </div>
+              <p className="leading-relaxed pl-6 text-teal-900/90">
+                {cookingContext.parentCookDay
+                  ? `Cocinado previamente el ${cookingContext.parentCookDay} (${cookingContext.parentCookMeal === 'lunch' ? 'comida' : 'cena'}).`
+                  : 'Cocinado previamente en esta semana.'}{' '}
+                ¡Listo para calentar en sartén, horno o microondas y servir!
+              </p>
+            </div>
+          )}
+
           {/* Ficha Especial Niños & BLW */}
           {recipe.kidsNotes && (
             <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200/90 text-xs sm:text-sm text-amber-950 space-y-1 shadow-xs">

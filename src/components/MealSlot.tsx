@@ -2,22 +2,24 @@
 
 import React from 'react';
 import { Recipe, MealSlotData } from '@/types';
-import { getSlotKind } from '@/lib/planUtils';
-import { Plus, Clock, Star, X, Eye } from 'lucide-react';
+import { getSlotKind, SlotCookingContext } from '@/lib/planUtils';
+import { Plus, Clock, Star, X, Eye, RefreshCw } from 'lucide-react';
 
 interface MealSlotProps {
   type: 'lunch' | 'dinner';
   slotData?: MealSlotData;
   recipe?: Recipe;
+  cookingContext?: SlotCookingContext;
   onAssignClick: () => void;
   onClearClick: () => void;
-  onViewRecipe: (recipe: Recipe) => void;
+  onViewRecipe: (recipe: Recipe, context?: SlotCookingContext) => void;
 }
 
 export const MealSlot: React.FC<MealSlotProps> = ({
   type,
   slotData,
   recipe,
+  cookingContext,
   onAssignClick,
   onClearClick,
   onViewRecipe,
@@ -117,7 +119,7 @@ export const MealSlot: React.FC<MealSlotProps> = ({
 
           <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
             <button
-              onClick={() => recipe && onViewRecipe(recipe)}
+              onClick={() => recipe && onViewRecipe(recipe, cookingContext)}
               className="text-slate-400 hover:text-emerald-700 p-1 rounded-md hover:bg-slate-100 transition-colors"
               title="Ver detalles e ingredientes"
             >
@@ -133,7 +135,7 @@ export const MealSlot: React.FC<MealSlotProps> = ({
           </div>
         </div>
 
-        <div className="flex items-start gap-1.5 cursor-pointer" onClick={() => recipe && onViewRecipe(recipe)}>
+        <div className="flex items-start gap-1.5 cursor-pointer" onClick={() => recipe && onViewRecipe(recipe, cookingContext)}>
           <span className="text-base leading-none">{recipe?.emoji || '🍲'}</span>
           <p className="font-semibold text-xs sm:text-sm text-slate-800 hover:text-emerald-700 leading-snug line-clamp-2 transition-colors">
             {recipe?.name}
@@ -146,6 +148,15 @@ export const MealSlot: React.FC<MealSlotProps> = ({
           {isLeftover && (
             <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-teal-100 text-teal-800 font-bold text-[10px]">
               {isLunch ? 'Tupper / Sobra' : 'Sobra'}
+            </span>
+          )}
+          {!isLeftover && cookingContext && cookingContext.leftoverCount > 0 && (
+            <span
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-800 font-bold text-[10px]"
+              title={`Cocina para ${cookingContext.totalInstances} comidas (${cookingContext.leftoverCount} de tupper/sobra)`}
+            >
+              <RefreshCw className="w-2.5 h-2.5" />
+              Cocina x{cookingContext.totalInstances}
             </span>
           )}
           {!isLeftover && recipe?.prepTimeMinutes ? (

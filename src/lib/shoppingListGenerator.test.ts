@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import type { PantryItem, Recipe, WeeklyPlan } from '@/types';
-import { emptyWeeklyPlan } from '@/lib/planUtils';
+import { emptyWeeklyPlan, getPlanCookingSessions } from '@/lib/planUtils';
 import {
   canonicalAmount,
   findRuleForIngredient,
@@ -114,16 +114,41 @@ describe('shoppingListGenerator', () => {
     assert.match(qty3, /375/);
   });
 
-  it('no compra de nuevo una receta marcada como sobra', () => {
-    const list = generateShoppingListFromPlan(
+  it('escala automáticamente cantidades cuando una receta tiene sobras enlazadas (Cocina x2 / x3)', () => {
+    // 4 comensales, 1 cocinado fresco + 1 día de sobras = 2 tomas (8 raciones) -> 500g * (8/4) = 1000g
+    const for4 = generateShoppingListFromPlan(
       planWith([
         { day: 'lunes', meal: 'lunch', id: 'r1' },
         { day: 'martes', meal: 'lunch', id: 'r1', leftover: true },
       ]),
-      [pollo]
+      [pollo],
+      { householdServings: 4 }
     );
-    const polloItem = list.find((i) => i.id === 'item-pollo-pechuga');
-    assert.match(polloItem?.recipeUsageNote || '', /500/);
+    const polloItem4 = for4.find((i) => i.id === 'item-pollo-pechuga');
+    assert.match(polloItem4?.recipeUsageNote || '', /1000/);
+
+    // 3 comensales, 1 cocinado fresco + 1 día de sobras = 2 tomas (6 raciones) -> 500g * (6/4) = 750g
+    const for3 = generateShoppingListFromPlan(
+      planWith([
+        { day: 'lunes', meal: 'lunch', id: 'r1' },
+        { day: 'martes', meal: 'lunch', id: 'r1', leftover: true },
+      ]),
+      [pollo],
+      { householdServings: 3 }
+    );
+    const polloItem3 = for3.find((i) => i.id === 'item-pollo-pechuga');
+    assert.match(polloItem3?.recipeUsageNote || '', /750/);
+
+    // 3 comensales, 1 cocinado fresco + 2 días de sobras = 3 tomas (9 raciones) -> 500g * (9/4) = 1125g
+    const plan3 = planWith([
+      { day: 'lunes', meal: 'lunch', id: 'r1' },
+      { day: 'martes', meal: 'lunch', id: 'r1', leftover: true },
+    ]);
+    plan3.days.miercoles.lunch = { kind: 'leftover', recipeId: 'r1', leftoverFromDay: 'lunes', leftoverFromMeal: 'lunch' };
+
+    const for3Triple = generateShoppingListFromPlan(plan3, [pollo], { householdServings: 3 });
+    const polloItemTriple = for3Triple.find((i) => i.id === 'item-pollo-pechuga');
+    assert.match(polloItemTriple?.recipeUsageNote || '', /1125/);
   });
 
   it('usa ids estables y conserva el check al regenerar', () => {
@@ -182,6 +207,33 @@ describe('shoppingListGenerator', () => {
       { pantry: expiredPantry }
     );
     assert.equal(listExpired.some((i) => i.id === 'item-pollo-pechuga'), true);
+  });
+
+  it('getPlanCookingSessions asocia correctamente cocciones frescas y sobras dependientes', () => {
+    const plan = planWith([
+      { day: 'lunes', meal: 'lunch', id: 'r1' },
+      { day: 'martes', meal: 'lunch', id: 'r1', leftover: true },
+    ]);
+    plan.days.miercoles.dinner = { kind: 'recipe', recipeId: 'r2' };
+
+    const sessions = getPlanCookingSessions(plan);
+    const lunesLunch = sessions.get('lunes-lunch');
+    const martesLunch = sessions.get('martes-lunch');
+    const miercolesDinner = sessions.get('miercoles-dinner');
+
+    assert.equal(lunesLunch?.isFreshCook, true);
+    assert.equal(lunesLunch?.totalInstances, 2);
+    assert.equal(lunesLunch?.leftoverCount, 1);
+    assert.equal(lunesLunch?.leftoverSlots[0]?.day, 'martes');
+
+    assert.equal(martesLunch?.isLeftover, true);
+    assert.equal(martesLunch?.totalInstances, 2);
+    assert.equal(martesLunch?.parentCookDay, 'lunes');
+    assert.equal(martesLunch?.parentCookMeal, 'lunch');
+
+    assert.equal(miercolesDinner?.isFreshCook, true);
+    assert.equal(miercolesDinner?.totalInstances, 1);
+    assert.equal(miercolesDinner?.leftoverCount, 0);
   });
 });
 

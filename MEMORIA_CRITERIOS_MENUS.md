@@ -127,4 +127,11 @@ Este documento sirve como **registro vivo y manual operativo** para diseñar los
   - **Generador blindado**: Filtro en `pickBestRecipe` y en `placeLeftovers` para asegurar que ninguna cena (fresca o de sobras) contenga pasta, reservando las cenas para platos ligeros con alta proteína limpia (pescados, carnes magras, huevos, tortillas, cremas suaves aterciopeladas y tacos de maíz).
   - **Avisos inteligentes**: `analyzePlanWarnings` alerta de inmediato si alguna cena contiene pasta.
 
+- **02/09/2026 (escalado dinámico de raciones e ingredientes en recetas con sobras / Batch Cooking x2 y x3)**:
+  - **Cálculo de tomas totales en lista de la compra**: La lista de la compra ahora detecta las sobras vinculadas a cada cocción fresca (`getPlanCookingSessions`) y escala automáticamente las cantidades: $\text{Raciones} = \text{comensales} \times (1 + N_{\text{sobras}})$. Por ejemplo, para 3 comensales y 1 día de sobras, compra exactamente para 6 raciones ($3 \times 2$), evitando quedarse corto el día de cocinado.
+  - **Ficha de receta contextuada para cocinado**: Al abrir una receta desde el menú semanal, la vista de preparación (`RecipeDetailModal`) se inicializa automáticamente con las raciones totales que hay que cocinar (ej. 6 raciones) y muestra un badge informativo (*"🥘 Cocina x2: Se come hoy y queda tupper para mañana"*).
+  - **Fichas de sobras identificadas**: Los huecos de sobras en el calendario muestran el badge de sobras y, al abrirlos, informan de qué día se cocinaron originalmente para recalentar directamente.
+
+
+
 
